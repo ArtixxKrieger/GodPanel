@@ -43,9 +43,11 @@ router.get("/admin/dashboard", requireAuth, async (req, res) => {
     const [
       totalUsersResult,
       newSignupsResult,
+      newSignupsPrevWeekResult,
       bannedUsersResult,
       platformRevenueResult,
       revenueThisMonthResult,
+      revenueLastMonthResult,
       activeSubscriptionsResult,
       freeUsersResult,
       pendingPaymentsResult,
@@ -57,9 +59,11 @@ router.get("/admin/dashboard", requireAuth, async (req, res) => {
     ] = await Promise.all([
       db.execute(sql`SELECT COUNT(*) as count FROM users`),
       db.execute(sql`SELECT COUNT(*) as count FROM users WHERE created_at::timestamptz >= NOW() - INTERVAL '7 days'`),
+      db.execute(sql`SELECT COUNT(*) as count FROM users WHERE created_at::timestamptz >= NOW() - INTERVAL '14 days' AND created_at::timestamptz < NOW() - INTERVAL '7 days'`),
       db.execute(sql`SELECT COUNT(*) as count FROM users WHERE is_banned = true`),
       db.execute(sql`SELECT COALESCE(SUM(amount), 0) as sum FROM subscription_payments WHERE status = 'paid'`),
       db.execute(sql`SELECT COALESCE(SUM(amount), 0) as sum FROM subscription_payments WHERE status = 'paid' AND paid_at::timestamptz >= DATE_TRUNC('month', NOW())`),
+      db.execute(sql`SELECT COALESCE(SUM(amount), 0) as sum FROM subscription_payments WHERE status = 'paid' AND paid_at::timestamptz >= DATE_TRUNC('month', NOW()) - INTERVAL '1 month' AND paid_at::timestamptz < DATE_TRUNC('month', NOW())`),
       db.execute(sql`SELECT COUNT(*) as count FROM tenant_subscriptions WHERE plan != 'free' AND status = 'active'`),
       db.execute(sql`SELECT COUNT(*) as count FROM tenant_subscriptions WHERE plan = 'free'`),
       db.execute(sql`SELECT COUNT(*) as count FROM subscription_payments WHERE status = 'pending'`),
@@ -84,12 +88,19 @@ router.get("/admin/dashboard", requireAuth, async (req, res) => {
       `),
     ]);
 
+    const thisMonthRev = Number((revenueThisMonthResult.rows[0] as any)?.sum ?? 0);
+    const lastMonthRev = Number((revenueLastMonthResult.rows[0] as any)?.sum ?? 0);
+    const thisWeekSignups = Number((newSignupsResult.rows[0] as any)?.count ?? 0);
+    const prevWeekSignups = Number((newSignupsPrevWeekResult.rows[0] as any)?.count ?? 0);
+
     res.json({
       totalUsers: Number((totalUsersResult.rows[0] as any)?.count ?? 0),
-      newSignupsThisWeek: Number((newSignupsResult.rows[0] as any)?.count ?? 0),
+      newSignupsThisWeek: thisWeekSignups,
+      newSignupsPrevWeek: prevWeekSignups,
       bannedUsers: Number((bannedUsersResult.rows[0] as any)?.count ?? 0),
       platformRevenue: Number((platformRevenueResult.rows[0] as any)?.sum ?? 0),
-      revenueThisMonth: Number((revenueThisMonthResult.rows[0] as any)?.sum ?? 0),
+      revenueThisMonth: thisMonthRev,
+      revenueLastMonth: lastMonthRev,
       activeSubscriptions: Number((activeSubscriptionsResult.rows[0] as any)?.count ?? 0),
       freeUsers: Number((freeUsersResult.rows[0] as any)?.count ?? 0),
       pendingPayments: Number((pendingPaymentsResult.rows[0] as any)?.count ?? 0),
@@ -147,10 +158,12 @@ router.get("/admin/users", requireAuth, async (req, res) => {
         u.created_at as "createdAt",
         s.store_name as "storeName",
         s.business_type as "businessType",
+        ts.plan,
         COALESCE(rev.total, 0) as "revenueTotal",
         (SELECT MAX(sa.created_at::timestamptz) FROM sales sa WHERE sa.user_id = u.id) as "lastActive"
       FROM users u
       LEFT JOIN user_settings s ON s.user_id = u.id
+      LEFT JOIN tenant_subscriptions ts ON ts.tenant_id = u.tenant_id
       LEFT JOIN (
         SELECT user_id, SUM(CAST(total AS NUMERIC)) as total FROM sales GROUP BY user_id
       ) rev ON rev.user_id = u.id
@@ -162,6 +175,122 @@ router.get("/admin/users", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Users error");
     res.status(500).json({ error: "Failed to load users" });
+  }
+});
+
+router.get("/admin/users/:userId", requireAuth, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const [profileResult, subscriptionsResult, salesSummaryResult, expensesSummaryResult] = await Promise.all([
+      db.execute(sql`
+        SELECT
+          u.id,
+          u.name,
+          u.email,
+          u.role,
+          u.tenant_id as "tenantId",
+          u.is_banned as "isBanned",
+          u.created_at as "createdAt",
+          s.store_name as "storeName",
+          s.business_type as "businessType",
+          s.currency,
+          ts.plan,
+          ts.status as "subscriptionStatus",
+          COALESCE(rev.total, 0) as "revenueTotal",
+          COALESCE(rev.sales_count, 0) as "salesCount",
+          COALESCE(prod.product_count, 0) as "productCount",
+          COALESCE(ai.count, 0) as "aiMemoryCount"
+        FROM users u
+        LEFT JOIN user_settings s ON s.user_id = u.id
+        LEFT JOIN tenant_subscriptions ts ON ts.tenant_id = u.tenant_id
+        LEFT JOIN (
+          SELECT user_id, SUM(CAST(total AS NUMERIC)) as total, COUNT(*) as sales_count FROM sales GROUP BY user_id
+        ) rev ON rev.user_id = u.id
+        LEFT JOIN (
+          SELECT user_id, COUNT(*) as product_count FROM products GROUP BY user_id
+        ) prod ON prod.user_id = u.id
+        LEFT JOIN (
+          SELECT tenant_id, COUNT(*) as count FROM ai_memories GROUP BY tenant_id
+        ) ai ON ai.tenant_id = u.tenant_id
+        WHERE u.id = ${userId}
+        LIMIT 1
+      `),
+      db.execute(sql`
+        SELECT
+          sp.id,
+          sp.amount,
+          sp.status,
+          sp.plan,
+          sp.created_at as "createdAt",
+          sp.paid_at as "paidAt"
+        FROM subscription_payments sp
+        JOIN users u ON u.tenant_id = sp.tenant_id
+        WHERE u.id = ${userId}
+        ORDER BY sp.created_at::timestamptz DESC
+        LIMIT 20
+      `),
+      db.execute(sql`
+        SELECT
+          DATE_TRUNC('month', created_at::timestamptz) as month,
+          COUNT(*) as sales,
+          SUM(CAST(total AS NUMERIC)) as revenue
+        FROM sales
+        WHERE user_id = ${userId}
+        GROUP BY 1
+        ORDER BY 1 DESC
+        LIMIT 6
+      `),
+      db.execute(sql`
+        SELECT COALESCE(SUM(CAST(amount AS NUMERIC)), 0) as total
+        FROM expenses
+        WHERE user_id = ${userId}
+      `),
+    ]);
+
+    const profile = profileResult.rows[0] as any;
+    if (!profile) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    res.json({
+      user: {
+        id: profile.id,
+        name: profile.name || "",
+        email: profile.email || "",
+        role: profile.role || "user",
+        tenantId: profile.tenantId || null,
+        isBanned: profile.isBanned ?? false,
+        createdAt: profile.createdAt || null,
+        storeName: profile.storeName || null,
+        businessType: profile.businessType || null,
+        currency: profile.currency || null,
+        plan: profile.plan || "free",
+        subscriptionStatus: profile.subscriptionStatus || null,
+        revenueTotal: Number(profile.revenueTotal),
+        salesCount: Number(profile.salesCount),
+        productCount: Number(profile.productCount),
+        aiMemoryCount: Number(profile.aiMemoryCount),
+        totalExpenses: Number((expensesSummaryResult.rows[0] as any)?.total ?? 0),
+      },
+      subscriptionHistory: (subscriptionsResult.rows as any[]).map(r => ({
+        id: r.id,
+        amount: Number(r.amount),
+        status: r.status,
+        plan: r.plan,
+        createdAt: r.createdAt || null,
+        paidAt: r.paidAt || null,
+      })),
+      monthlySales: (salesSummaryResult.rows as any[]).map(r => ({
+        month: r.month instanceof Date ? r.month.toISOString().slice(0, 7) : String(r.month).slice(0, 7),
+        sales: Number(r.sales),
+        revenue: Number(r.revenue),
+      })),
+    });
+  } catch (err) {
+    req.log.error({ err }, "User detail error");
+    res.status(500).json({ error: "Failed to load user detail" });
   }
 });
 
@@ -265,6 +394,78 @@ router.get("/admin/revenue/top-stores", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Top stores error");
     res.status(500).json({ error: "Failed to load top stores" });
+  }
+});
+
+router.get("/admin/subscriptions", requireAuth, async (req, res) => {
+  try {
+    const { status, search } = req.query as { status?: string; search?: string };
+
+    let whereClause = sql`1=1`;
+    if (status && status !== "all") {
+      whereClause = sql`${whereClause} AND sp.status = ${status}`;
+    }
+    if (search) {
+      whereClause = sql`${whereClause} AND (u.name ILIKE ${"%" + search + "%"} OR u.email ILIKE ${"%" + search + "%"})`;
+    }
+
+    const result = await db.execute(sql`
+      SELECT
+        sp.id,
+        sp.tenant_id as "tenantId",
+        sp.amount,
+        sp.status,
+        sp.plan,
+        sp.created_at as "createdAt",
+        sp.paid_at as "paidAt",
+        u.id as "userId",
+        u.name as "userName",
+        u.email as "userEmail",
+        COALESCE(s.store_name, u.name) as "storeName"
+      FROM subscription_payments sp
+      LEFT JOIN users u ON u.tenant_id = sp.tenant_id
+      LEFT JOIN user_settings s ON s.user_id = u.id
+      WHERE ${whereClause}
+      ORDER BY sp.created_at::timestamptz DESC
+    `);
+
+    const totalsResult = await db.execute(sql`
+      SELECT
+        COUNT(*) FILTER (WHERE status = 'paid') as paid_count,
+        COUNT(*) FILTER (WHERE status = 'pending') as pending_count,
+        COUNT(*) FILTER (WHERE status = 'failed') as failed_count,
+        COALESCE(SUM(amount) FILTER (WHERE status = 'paid'), 0) as total_collected,
+        COALESCE(SUM(amount) FILTER (WHERE status = 'pending'), 0) as total_pending
+      FROM subscription_payments
+    `);
+
+    const t = totalsResult.rows[0] as any;
+
+    res.json({
+      payments: result.rows.map((row: any) => ({
+        id: row.id,
+        tenantId: row.tenantId || null,
+        userId: row.userId || null,
+        userName: row.userName || null,
+        userEmail: row.userEmail || null,
+        storeName: row.storeName || null,
+        amount: Number(row.amount),
+        status: row.status,
+        plan: row.plan,
+        createdAt: row.createdAt || null,
+        paidAt: row.paidAt || null,
+      })),
+      summary: {
+        paidCount: Number(t?.paid_count ?? 0),
+        pendingCount: Number(t?.pending_count ?? 0),
+        failedCount: Number(t?.failed_count ?? 0),
+        totalCollected: Number(t?.total_collected ?? 0),
+        totalPending: Number(t?.total_pending ?? 0),
+      },
+    });
+  } catch (err) {
+    req.log.error({ err }, "Subscriptions error");
+    res.status(500).json({ error: "Failed to load subscriptions" });
   }
 });
 

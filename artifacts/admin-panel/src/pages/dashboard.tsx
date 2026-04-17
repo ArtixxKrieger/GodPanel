@@ -7,11 +7,24 @@ import { format } from "date-fns";
 import {
   Users, DollarSign, Store, ArrowUpRight, TrendingUp,
   AlertTriangle, CreditCard, Clock, Crown, UserCheck,
-  ChevronRight, Zap
+  ChevronRight, Zap, TrendingDown,
 } from "lucide-react";
 
+function TrendBadge({ current, prev }: { current: number; prev: number }) {
+  if (prev === 0 && current === 0) return null;
+  if (prev === 0) return <span className="text-[10px] font-semibold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">New</span>;
+  const pct = Math.round(((current - prev) / prev) * 100);
+  const up = pct >= 0;
+  const Icon = up ? TrendingUp : TrendingDown;
+  return (
+    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 ${up ? "text-emerald-500 bg-emerald-500/10" : "text-destructive bg-destructive/10"}`}>
+      <Icon className="w-2.5 h-2.5" />{up ? "+" : ""}{pct}%
+    </span>
+  );
+}
+
 function MetricCard({
-  title, value, icon: Icon, color, href, sub,
+  title, value, icon: Icon, color, href, sub, trend,
 }: {
   title: string;
   value: string;
@@ -19,6 +32,7 @@ function MetricCard({
   color: string;
   href?: string;
   sub?: string;
+  trend?: React.ReactNode;
 }) {
   const inner = (
     <Card className={`bg-card/50 border-border/50 transition-all duration-200 ${href ? "hover:bg-card hover:border-primary/30 hover:shadow-md cursor-pointer group" : ""}`}>
@@ -30,7 +44,10 @@ function MetricCard({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-foreground">{value}</div>
+        <div className="flex items-end gap-2">
+          <div className="text-2xl font-bold text-foreground">{value}</div>
+          {trend}
+        </div>
         {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
       </CardContent>
     </Card>
@@ -99,7 +116,7 @@ export default function Dashboard() {
       value: fmt(metrics.platformRevenue),
       icon: DollarSign,
       color: "text-emerald-500",
-      href: "/revenue",
+      href: "/subscriptions",
       sub: "Total paid subscriptions",
     },
     {
@@ -107,16 +124,17 @@ export default function Dashboard() {
       value: fmt(metrics.revenueThisMonth),
       icon: TrendingUp,
       color: "text-primary",
-      href: "/revenue",
-      sub: "Subscription payments this month",
+      href: "/subscriptions",
+      sub: "vs last month",
+      trend: <TrendBadge current={metrics.revenueThisMonth} prev={metrics.revenueLastMonth ?? 0} />,
     },
     {
       title: "Pending Payments",
       value: num(metrics.pendingPayments),
       icon: Clock,
       color: "text-orange-400",
-      href: "/revenue",
-      sub: "Awaiting payment confirmation",
+      href: "/subscriptions",
+      sub: "Awaiting confirmation",
     },
     {
       title: "POS Sales (All Stores)",
@@ -124,7 +142,7 @@ export default function Dashboard() {
       icon: CreditCard,
       color: "text-blue-400",
       href: "/stores",
-      sub: `${num(metrics.totalPosSales)} transactions total`,
+      sub: `${num(metrics.totalPosSales)} transactions`,
     },
   ];
 
@@ -159,7 +177,8 @@ export default function Dashboard() {
       icon: ArrowUpRight,
       color: "text-emerald-400",
       href: "/users",
-      sub: "Registered in the last 7 days",
+      sub: "vs prior 7 days",
+      trend: <TrendBadge current={metrics.newSignupsThisWeek} prev={metrics.newSignupsPrevWeek ?? 0} />,
     },
   ];
 

@@ -49,9 +49,11 @@ export interface SubscriptionPlanCount {
 export interface DashboardMetrics {
   totalUsers: number;
   newSignupsThisWeek: number;
+  newSignupsPrevWeek: number;
   bannedUsers: number;
   platformRevenue: number;
   revenueThisMonth: number;
+  revenueLastMonth: number;
   activeSubscriptions: number;
   freeUsers: number;
   pendingPayments: number;
@@ -72,6 +74,7 @@ export interface AdminUser {
   createdAt?: string | null;
   storeName?: string | null;
   businessType?: string | null;
+  plan?: string | null;
   revenueTotal: number;
   lastActive?: string | null;
 }
@@ -149,10 +152,83 @@ export interface AiUsageEntry {
   lastActivity?: string | null;
 }
 
+export interface SubscriptionPayment {
+  id: string;
+  tenantId?: string | null;
+  userId?: string | null;
+  userName?: string | null;
+  userEmail?: string | null;
+  storeName?: string | null;
+  amount: number;
+  status: string;
+  plan: string;
+  createdAt?: string | null;
+  paidAt?: string | null;
+}
+
+export interface SubscriptionSummary {
+  paidCount: number;
+  pendingCount: number;
+  failedCount: number;
+  totalCollected: number;
+  totalPending: number;
+}
+
+export interface SubscriptionsResponse {
+  payments: SubscriptionPayment[];
+  summary: SubscriptionSummary;
+}
+
+export interface UserDetailProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  tenantId?: string | null;
+  isBanned: boolean;
+  createdAt?: string | null;
+  storeName?: string | null;
+  businessType?: string | null;
+  currency?: string | null;
+  plan: string;
+  subscriptionStatus?: string | null;
+  revenueTotal: number;
+  salesCount: number;
+  productCount: number;
+  aiMemoryCount: number;
+  totalExpenses: number;
+}
+
+export interface SubscriptionHistoryItem {
+  id: string;
+  amount: number;
+  status: string;
+  plan: string;
+  createdAt?: string | null;
+  paidAt?: string | null;
+}
+
+export interface MonthlySalesItem {
+  month: string;
+  sales: number;
+  revenue: number;
+}
+
+export interface UserDetailResponse {
+  user: UserDetailProfile;
+  subscriptionHistory: SubscriptionHistoryItem[];
+  monthlySales: MonthlySalesItem[];
+}
+
 export type GetUsersParams = {
   search?: string;
   role?: string;
   banned?: boolean;
+};
+
+export type GetSubscriptionsParams = {
+  status?: string;
+  search?: string;
 };
 
 export type GetRevenueParams = {

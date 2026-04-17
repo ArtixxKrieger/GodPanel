@@ -5,15 +5,16 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/layout";
 import { getToken } from "@/lib/auth";
 
-// Pages
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import Users from "@/pages/users";
+import UserDetail from "@/pages/user-detail";
 import Revenue from "@/pages/revenue";
 import Stores from "@/pages/stores";
 import StoreDetail from "@/pages/store-detail";
 import AiUsage from "@/pages/ai-usage";
+import Subscriptions from "@/pages/subscriptions";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,12 @@ function Router() {
       
       <Route path="/ai-usage">
         <ProtectedRoute><AiUsage /></ProtectedRoute>
+      </Route>
+      <Route path="/subscriptions">
+        <ProtectedRoute><Subscriptions /></ProtectedRoute>
+      </Route>
+      <Route path="/users/:id">
+        <ProtectedRoute><UserDetail /></ProtectedRoute>
       </Route>
 
       {/* 404 */}

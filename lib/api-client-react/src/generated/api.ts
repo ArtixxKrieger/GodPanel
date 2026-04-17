@@ -24,6 +24,7 @@ import type {
   DashboardMetrics,
   ErrorResponse,
   GetRevenueParams,
+  GetSubscriptionsParams,
   GetUsersParams,
   HealthStatus,
   LoginRequest,
@@ -32,6 +33,8 @@ import type {
   StoreDetail,
   StoreRevenueSummary,
   StoreSummary,
+  SubscriptionsResponse,
+  UserDetailResponse,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -1003,5 +1006,115 @@ export function useGetAiUsage<
     queryKey: QueryKey;
   };
 
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get all subscription payments
+ */
+export const getGetSubscriptionsUrl = (params?: GetSubscriptionsParams) => {
+  const searchParams = new URLSearchParams();
+  if (params?.status) searchParams.set("status", params.status);
+  if (params?.search) searchParams.set("search", params.search);
+  const qs = searchParams.toString();
+  return `/api/admin/subscriptions${qs ? `?${qs}` : ""}`;
+};
+
+export const getSubscriptions = async (
+  params?: GetSubscriptionsParams,
+  options?: RequestInit,
+): Promise<SubscriptionsResponse> => {
+  return customFetch<SubscriptionsResponse>(getGetSubscriptionsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSubscriptionsQueryKey = (params?: GetSubscriptionsParams) =>
+  [`/api/admin/subscriptions`, ...(params ? [params] : [])] as const;
+
+export const getGetSubscriptionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSubscriptions>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetSubscriptionsParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getSubscriptions>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetSubscriptionsQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSubscriptions>>> = ({ signal }) =>
+    getSubscriptions(params, { signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSubscriptions>>, TError, TData
+  > & { queryKey: QueryKey };
+};
+
+export function useGetSubscriptions<
+  TData = Awaited<ReturnType<typeof getSubscriptions>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetSubscriptionsParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getSubscriptions>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSubscriptionsQueryOptions(params, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get user detail
+ */
+export const getGetUserDetailUrl = (userId: string) => `/api/admin/users/${userId}`;
+
+export const getUserDetail = async (
+  userId: string,
+  options?: RequestInit,
+): Promise<UserDetailResponse> => {
+  return customFetch<UserDetailResponse>(getGetUserDetailUrl(userId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetUserDetailQueryKey = (userId: string) =>
+  [`/api/admin/users/${userId}`] as const;
+
+export const getGetUserDetailQueryOptions = <
+  TData = Awaited<ReturnType<typeof getUserDetail>>,
+  TError = ErrorType<unknown>,
+>(
+  userId: string,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getUserDetail>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetUserDetailQueryKey(userId);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserDetail>>> = ({ signal }) =>
+    getUserDetail(userId, { signal, ...requestOptions });
+  return { queryKey, queryFn, enabled: !!userId, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getUserDetail>>, TError, TData
+  > & { queryKey: QueryKey };
+};
+
+export function useGetUserDetail<
+  TData = Awaited<ReturnType<typeof getUserDetail>>,
+  TError = ErrorType<unknown>,
+>(
+  userId: string,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getUserDetail>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetUserDetailQueryOptions(userId, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
   return { ...query, queryKey: queryOptions.queryKey };
 }

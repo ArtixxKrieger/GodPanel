@@ -1,14 +1,34 @@
 import { useState, useMemo } from "react";
 import { useGetUsers, useBanUser, useUnbanUser, getGetUsersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Ban, ShieldCheck, Users, UserX, Crown, UserCheck } from "lucide-react";
+import { Search, Ban, ShieldCheck, Users, UserX, Crown, UserCheck, Download, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
+
+function exportCSV(rows: any[], filename: string) {
+  if (!rows.length) return;
+  const headers = ["Name", "Email", "Store", "Plan", "Revenue", "Joined", "Status"];
+  const lines = rows.map(u => [
+    u.name || "",
+    u.email || "",
+    u.storeName || "",
+    u.plan || "free",
+    u.revenueTotal ?? 0,
+    u.createdAt ? format(new Date(u.createdAt), "yyyy-MM-dd") : "",
+    u.isBanned ? "Banned" : "Active",
+  ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
+  const csv = [headers.join(","), ...lines].join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.download = filename;
+  a.click();
+}
 
 const PLAN_COLORS: Record<string, string> = {
   pro: "bg-primary/15 text-primary border-0",
@@ -105,6 +125,17 @@ export default function UsersPage() {
             <SelectItem value="banned">Banned Only</SelectItem>
           </SelectContent>
         </Select>
+        {users && users.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10 gap-2 border-border/60 shrink-0"
+            onClick={() => exportCSV(users, `users-${format(new Date(), "yyyy-MM-dd")}.csv`)}
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Export CSV</span>
+          </Button>
+        )}
       </div>
 
       {/* User List */}
@@ -142,7 +173,7 @@ export default function UsersPage() {
                 {users?.map((user) => (
                   <li key={user.id} className="px-4 py-3.5">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0">
+                      <Link href={`/users/${user.id}`} className="flex items-start gap-3 min-w-0 flex-1">
                         <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
                           <span className="text-xs font-bold text-primary uppercase">
                             {(user.name || user.email || "?").charAt(0)}
@@ -162,7 +193,7 @@ export default function UsersPage() {
                             <span className="text-xs font-semibold text-emerald-500">{fmt(user.revenueTotal)}</span>
                           </div>
                         </div>
-                      </div>
+                      </Link>
                       {user.role !== "admin" && (
                         <Button
                           variant={user.isBanned ? "outline" : "ghost"}
@@ -225,17 +256,24 @@ export default function UsersPage() {
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          {user.role !== "admin" && (
-                            <Button
-                              variant={user.isBanned ? "outline" : "ghost"}
-                              size="sm"
-                              className={`h-8 text-xs ${!user.isBanned ? "text-destructive hover:text-destructive hover:bg-destructive/10" : ""}`}
-                              onClick={() => handleBanToggle(user.id, !!user.isBanned)}
-                              disabled={banMutation.isPending || unbanMutation.isPending}
-                            >
-                              {user.isBanned ? <><ShieldCheck className="w-3 h-3 mr-1" />Unban</> : <><Ban className="w-3 h-3 mr-1" />Ban</>}
-                            </Button>
-                          )}
+                          <div className="flex items-center justify-end gap-1.5">
+                            {user.role !== "admin" && (
+                              <Button
+                                variant={user.isBanned ? "outline" : "ghost"}
+                                size="sm"
+                                className={`h-8 text-xs ${!user.isBanned ? "text-destructive hover:text-destructive hover:bg-destructive/10" : ""}`}
+                                onClick={() => handleBanToggle(user.id, !!user.isBanned)}
+                                disabled={banMutation.isPending || unbanMutation.isPending}
+                              >
+                                {user.isBanned ? <><ShieldCheck className="w-3 h-3 mr-1" />Unban</> : <><Ban className="w-3 h-3 mr-1" />Ban</>}
+                              </Button>
+                            )}
+                            <Link href={`/users/${user.id}`}>
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center w-8 h-8 rounded-lg hover:bg-primary/10 text-primary">
+                                <ChevronRight className="w-4 h-4" />
+                              </div>
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     ))}

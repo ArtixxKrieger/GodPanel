@@ -3,9 +3,31 @@ import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Store, ChevronRight, Search, Package, CreditCard, TrendingUp } from "lucide-react";
+import { Store, ChevronRight, Search, Package, CreditCard, TrendingUp, Download } from "lucide-react";
 import { useState, useMemo } from "react";
+import { format } from "date-fns";
+
+function exportStoresCSV(rows: any[], filename: string) {
+  if (!rows.length) return;
+  const headers = ["Store Name", "Owner", "Email", "Type", "Products", "Sales", "Revenue", "Status"];
+  const lines = rows.map(s => [
+    s.storeName || "",
+    s.ownerName || "",
+    s.ownerEmail || "",
+    s.businessType || "",
+    s.productCount ?? 0,
+    s.salesCount ?? 0,
+    s.revenue ?? 0,
+    s.isBanned ? "Banned" : "Active",
+  ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
+  const csv = [headers.join(","), ...lines].join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.download = filename;
+  a.click();
+}
 
 export default function Stores() {
   const { data: stores, isLoading } = useGetStores();
@@ -30,15 +52,28 @@ export default function Stores() {
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Stores</h1>
           <p className="text-muted-foreground text-sm mt-0.5">View and monitor all merchant storefronts.</p>
         </div>
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search stores…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-card border-border/60 h-10"
-          />
+        <div className="flex gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search stores…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 bg-card border-border/60 h-10"
+            />
+          </div>
+          {filtered.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-10 gap-2 border-border/60 shrink-0"
+              onClick={() => exportStoresCSV(filtered, `stores-${format(new Date(), "yyyy-MM-dd")}.csv`)}
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Export</span>
+            </Button>
+          )}
         </div>
       </div>
 

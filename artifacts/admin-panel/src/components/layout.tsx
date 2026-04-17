@@ -8,10 +8,10 @@ import {
   BarChart3,
   Store,
   BrainCircuit,
+  CreditCard,
   LogOut,
   ShieldCheck,
   Menu,
-  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +24,8 @@ const navItems = [
   { href: "/users", label: "Users", icon: Users },
   { href: "/revenue", label: "Revenue", icon: BarChart3 },
   { href: "/stores", label: "Stores", icon: Store },
-  { href: "/ai-usage", label: "AI Usage", icon: BrainCircuit },
+  { href: "/subscriptions", label: "Subscriptions", icon: CreditCard },
+  { href: "/ai-usage", label: "AI", icon: BrainCircuit },
 ];
 
 export function Layout({ children }: LayoutProps) {
