@@ -443,12 +443,12 @@ export function useGetUsers<
 /**
  * @summary Ban a user
  */
-export const getBanUserUrl = (userId: number) => {
+export const getBanUserUrl = (userId: string) => {
   return `/api/admin/users/${userId}/ban`;
 };
 
 export const banUser = async (
-  userId: number,
+  userId: string,
   options?: RequestInit,
 ): Promise<ActionResponse> => {
   return customFetch<ActionResponse>(getBanUserUrl(userId), {
@@ -464,14 +464,14 @@ export const getBanUserMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof banUser>>,
     TError,
-    { userId: number },
+    { userId: string },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof banUser>>,
   TError,
-  { userId: number },
+  { userId: string },
   TContext
 > => {
   const mutationKey = ["banUser"];
@@ -485,7 +485,7 @@ export const getBanUserMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof banUser>>,
-    { userId: number }
+    { userId: string }
   > = (props) => {
     const { userId } = props ?? {};
 
@@ -511,14 +511,14 @@ export const useBanUser = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof banUser>>,
     TError,
-    { userId: number },
+    { userId: string },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof banUser>>,
   TError,
-  { userId: number },
+  { userId: string },
   TContext
 > => {
   return useMutation(getBanUserMutationOptions(options));
@@ -527,12 +527,12 @@ export const useBanUser = <
 /**
  * @summary Unban a user
  */
-export const getUnbanUserUrl = (userId: number) => {
+export const getUnbanUserUrl = (userId: string) => {
   return `/api/admin/users/${userId}/unban`;
 };
 
 export const unbanUser = async (
-  userId: number,
+  userId: string,
   options?: RequestInit,
 ): Promise<ActionResponse> => {
   return customFetch<ActionResponse>(getUnbanUserUrl(userId), {
@@ -548,14 +548,14 @@ export const getUnbanUserMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof unbanUser>>,
     TError,
-    { userId: number },
+    { userId: string },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof unbanUser>>,
   TError,
-  { userId: number },
+  { userId: string },
   TContext
 > => {
   const mutationKey = ["unbanUser"];
@@ -569,7 +569,7 @@ export const getUnbanUserMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof unbanUser>>,
-    { userId: number }
+    { userId: string }
   > = (props) => {
     const { userId } = props ?? {};
 
@@ -595,14 +595,14 @@ export const useUnbanUser = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof unbanUser>>,
     TError,
-    { userId: number },
+    { userId: string },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof unbanUser>>,
   TError,
-  { userId: number },
+  { userId: string },
   TContext
 > => {
   return useMutation(getUnbanUserMutationOptions(options));
@@ -847,12 +847,12 @@ export function useGetStores<
 /**
  * @summary Get detailed store info
  */
-export const getGetStoreDetailUrl = (userId: number) => {
+export const getGetStoreDetailUrl = (userId: string) => {
   return `/api/admin/stores/${userId}`;
 };
 
 export const getStoreDetail = async (
-  userId: number,
+  userId: string,
   options?: RequestInit,
 ): Promise<StoreDetail> => {
   return customFetch<StoreDetail>(getGetStoreDetailUrl(userId), {
@@ -861,7 +861,7 @@ export const getStoreDetail = async (
   });
 };
 
-export const getGetStoreDetailQueryKey = (userId: number) => {
+export const getGetStoreDetailQueryKey = (userId: string) => {
   return [`/api/admin/stores/${userId}`] as const;
 };
 
@@ -869,7 +869,7 @@ export const getGetStoreDetailQueryOptions = <
   TData = Awaited<ReturnType<typeof getStoreDetail>>,
   TError = ErrorType<unknown>,
 >(
-  userId: number,
+  userId: string,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getStoreDetail>>,
@@ -912,7 +912,7 @@ export function useGetStoreDetail<
   TData = Awaited<ReturnType<typeof getStoreDetail>>,
   TError = ErrorType<unknown>,
 >(
-  userId: number,
+  userId: string,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getStoreDetail>>,

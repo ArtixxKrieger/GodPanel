@@ -24,7 +24,7 @@ export default function UsersPage() {
   const banMutation = useBanUser();
   const unbanMutation = useUnbanUser();
 
-  const handleBanToggle = (userId: number, isBanned: boolean) => {
+  const handleBanToggle = (userId: string, isBanned: boolean) => {
     if (isBanned) {
       unbanMutation.mutate({ userId }, {
         onSuccess: () => {

@@ -50,15 +50,15 @@ router.get("/admin/dashboard", requireAuth, async (req, res) => {
       revenueThisMonthResult,
     ] = await Promise.all([
       db.execute(sql`SELECT COUNT(*) as count FROM users`),
-      db.execute(sql`SELECT COALESCE(SUM(total), 0) as sum FROM sales`),
+      db.execute(sql`SELECT COALESCE(SUM(CAST(total AS NUMERIC)), 0) as sum FROM sales`),
       db.execute(
-        sql`SELECT COUNT(*) as count FROM users WHERE created_at >= NOW() - INTERVAL '7 days'`
+        sql`SELECT COUNT(*) as count FROM users WHERE created_at::timestamptz >= NOW() - INTERVAL '7 days'`
       ),
       db.execute(sql`SELECT COUNT(*) as count FROM sales`),
-      db.execute(sql`SELECT COALESCE(SUM(amount), 0) as sum FROM expenses`),
+      db.execute(sql`SELECT COALESCE(SUM(CAST(amount AS NUMERIC)), 0) as sum FROM expenses`),
       db.execute(sql`SELECT COUNT(*) as count FROM users WHERE is_banned = true`),
       db.execute(
-        sql`SELECT COALESCE(SUM(total), 0) as sum FROM sales WHERE created_at >= DATE_TRUNC('month', NOW())`
+        sql`SELECT COALESCE(SUM(CAST(total AS NUMERIC)), 0) as sum FROM sales WHERE created_at::timestamptz >= DATE_TRUNC('month', NOW())`
       ),
     ]);
 
@@ -71,7 +71,7 @@ router.get("/admin/dashboard", requireAuth, async (req, res) => {
     const revenueThisMonth = Number((revenueThisMonthResult.rows[0] as any)?.sum ?? 0);
 
     const activeStoresResult = await db.execute(
-      sql`SELECT COUNT(DISTINCT user_id) as count FROM sales WHERE created_at >= NOW() - INTERVAL '30 days'`
+      sql`SELECT COUNT(DISTINCT user_id) as count FROM sales WHERE created_at::timestamptz >= NOW() - INTERVAL '30 days'`
     );
     const activeStores = Number((activeStoresResult.rows[0] as any)?.count ?? 0);
 
@@ -124,14 +124,14 @@ router.get("/admin/users", requireAuth, async (req, res) => {
         s.store_name as "storeName",
         s.business_type as "businessType",
         COALESCE(rev.total, 0) as "revenueTotal",
-        (SELECT MAX(sa.created_at) FROM sales sa WHERE sa.user_id = u.id) as "lastActive"
+        (SELECT MAX(sa.created_at::timestamptz) FROM sales sa WHERE sa.user_id = u.id) as "lastActive"
       FROM users u
-      LEFT JOIN settings s ON s.user_id = u.id
+      LEFT JOIN user_settings s ON s.user_id = u.id
       LEFT JOIN (
-        SELECT user_id, SUM(total) as total FROM sales GROUP BY user_id
+        SELECT user_id, SUM(CAST(total AS NUMERIC)) as total FROM sales GROUP BY user_id
       ) rev ON rev.user_id = u.id
       WHERE ${whereClause}
-      ORDER BY u.created_at DESC
+      ORDER BY u.created_at::timestamptz DESC
     `);
 
     res.json(result.rows);
@@ -143,7 +143,7 @@ router.get("/admin/users", requireAuth, async (req, res) => {
 
 router.post("/admin/users/:userId/ban", requireAuth, async (req, res) => {
   try {
-    const userId = parseInt(req.params.userId);
+    const userId = req.params.userId;
     await db.execute(sql`UPDATE users SET is_banned = true WHERE id = ${userId}`);
     res.json({ success: true, message: "User banned successfully" });
   } catch (err) {
@@ -154,7 +154,7 @@ router.post("/admin/users/:userId/ban", requireAuth, async (req, res) => {
 
 router.post("/admin/users/:userId/unban", requireAuth, async (req, res) => {
   try {
-    const userId = parseInt(req.params.userId);
+    const userId = req.params.userId;
     await db.execute(sql`UPDATE users SET is_banned = false WHERE id = ${userId}`);
     res.json({ success: true, message: "User unbanned successfully" });
   } catch (err) {
@@ -176,22 +176,22 @@ router.get("/admin/revenue", requireAuth, async (req, res) => {
 
     const dataResult = await db.execute(sql`
       SELECT
-        DATE(created_at) as date,
-        COALESCE(SUM(total), 0) as revenue,
+        DATE(created_at::timestamptz) as date,
+        COALESCE(SUM(CAST(total AS NUMERIC)), 0) as revenue,
         COUNT(*) as sales
       FROM sales
-      WHERE created_at >= NOW() - INTERVAL ${sql.raw(`'${interval}'`)}
-      GROUP BY DATE(created_at)
-      ORDER BY DATE(created_at) ASC
+      WHERE created_at::timestamptz >= NOW() - INTERVAL ${sql.raw(`'${interval}'`)}
+      GROUP BY DATE(created_at::timestamptz)
+      ORDER BY DATE(created_at::timestamptz) ASC
     `);
 
     const totalResult = await db.execute(sql`
       SELECT
-        COALESCE(SUM(total), 0) as "totalRevenue",
+        COALESCE(SUM(CAST(total AS NUMERIC)), 0) as "totalRevenue",
         COUNT(*) as "totalSales",
-        CASE WHEN COUNT(*) > 0 THEN COALESCE(SUM(total), 0) / COUNT(*) ELSE 0 END as "averageOrderValue"
+        CASE WHEN COUNT(*) > 0 THEN COALESCE(SUM(CAST(total AS NUMERIC)), 0) / COUNT(*) ELSE 0 END as "averageOrderValue"
       FROM sales
-      WHERE created_at >= NOW() - INTERVAL ${sql.raw(`'${interval}'`)}
+      WHERE created_at::timestamptz >= NOW() - INTERVAL ${sql.raw(`'${interval}'`)}
     `);
 
     const totals = totalResult.rows[0] as any;
@@ -218,12 +218,12 @@ router.get("/admin/revenue/top-stores", requireAuth, async (req, res) => {
       SELECT
         u.id as "userId",
         COALESCE(s.store_name, u.name) as "storeName",
-        COALESCE(SUM(sa.total), 0) as revenue,
+        COALESCE(SUM(CAST(sa.total AS NUMERIC)), 0) as revenue,
         COUNT(sa.id) as "salesCount",
         s.business_type as "businessType"
       FROM users u
       LEFT JOIN sales sa ON sa.user_id = u.id
-      LEFT JOIN settings s ON s.user_id = u.id
+      LEFT JOIN user_settings s ON s.user_id = u.id
       GROUP BY u.id, s.store_name, u.name, s.business_type
       ORDER BY revenue DESC
       LIMIT 10
@@ -231,7 +231,7 @@ router.get("/admin/revenue/top-stores", requireAuth, async (req, res) => {
 
     res.json(
       result.rows.map((row: any) => ({
-        userId: Number(row.userId),
+        userId: row.userId,
         storeName: row.storeName || "Unknown",
         revenue: Number(row.revenue),
         salesCount: Number(row.salesCount),
@@ -259,9 +259,9 @@ router.get("/admin/stores", requireAuth, async (req, res) => {
         COALESCE(prod.product_count, 0) as "productCount",
         u.is_banned as "isBanned"
       FROM users u
-      LEFT JOIN settings s ON s.user_id = u.id
+      LEFT JOIN user_settings s ON s.user_id = u.id
       LEFT JOIN (
-        SELECT user_id, SUM(total) as revenue, COUNT(*) as sales_count FROM sales GROUP BY user_id
+        SELECT user_id, SUM(CAST(total AS NUMERIC)) as revenue, COUNT(*) as sales_count FROM sales GROUP BY user_id
       ) rev ON rev.user_id = u.id
       LEFT JOIN (
         SELECT user_id, COUNT(*) as product_count FROM products GROUP BY user_id
@@ -271,7 +271,7 @@ router.get("/admin/stores", requireAuth, async (req, res) => {
 
     res.json(
       result.rows.map((row: any) => ({
-        userId: Number(row.userId),
+        userId: row.userId,
         storeName: row.storeName || "Unknown",
         ownerName: row.ownerName || "",
         ownerEmail: row.ownerEmail || "",
@@ -291,7 +291,7 @@ router.get("/admin/stores", requireAuth, async (req, res) => {
 
 router.get("/admin/stores/:userId", requireAuth, async (req, res) => {
   try {
-    const userId = parseInt(req.params.userId);
+    const userId = req.params.userId;
 
     const [storeResult, productsResult, salesResult, expensesResult, aiResult] =
       await Promise.all([
@@ -308,9 +308,9 @@ router.get("/admin/stores/:userId", requireAuth, async (req, res) => {
             COALESCE(prod.product_count, 0) as "productCount",
             u.is_banned as "isBanned"
           FROM users u
-          LEFT JOIN settings s ON s.user_id = u.id
+          LEFT JOIN user_settings s ON s.user_id = u.id
           LEFT JOIN (
-            SELECT user_id, SUM(total) as revenue, COUNT(*) as sales_count FROM sales GROUP BY user_id
+            SELECT user_id, SUM(CAST(total AS NUMERIC)) as revenue, COUNT(*) as sales_count FROM sales GROUP BY user_id
           ) rev ON rev.user_id = u.id
           LEFT JOIN (
             SELECT user_id, COUNT(*) as product_count FROM products GROUP BY user_id
@@ -319,13 +319,13 @@ router.get("/admin/stores/:userId", requireAuth, async (req, res) => {
           LIMIT 1
         `),
         db.execute(
-          sql`SELECT id, name, price, category, stock FROM products WHERE user_id = ${userId} ORDER BY name LIMIT 100`
+          sql`SELECT id, name, CAST(price AS NUMERIC) as price, category, stock FROM products WHERE user_id = ${userId} ORDER BY name LIMIT 100`
         ),
         db.execute(
-          sql`SELECT id, total, payment_method as "paymentMethod", created_at as "createdAt", COALESCE(jsonb_array_length(items::jsonb), 0) as "itemCount" FROM sales WHERE user_id = ${userId} ORDER BY created_at DESC LIMIT 50`
+          sql`SELECT id, CAST(total AS NUMERIC) as total, payment_method as "paymentMethod", created_at as "createdAt", COALESCE(jsonb_array_length(items::jsonb), 0) as "itemCount" FROM sales WHERE user_id = ${userId} ORDER BY created_at::timestamptz DESC LIMIT 50`
         ),
         db.execute(
-          sql`SELECT id, description, amount, created_at as "createdAt" FROM expenses WHERE user_id = ${userId} ORDER BY created_at DESC LIMIT 50`
+          sql`SELECT id, description, CAST(amount AS NUMERIC) as amount, created_at as "createdAt" FROM expenses WHERE user_id = ${userId} ORDER BY created_at::timestamptz DESC LIMIT 50`
         ),
         db.execute(
           sql`SELECT COUNT(*) as count FROM ai_memories WHERE tenant_id = (SELECT tenant_id FROM users WHERE id = ${userId} LIMIT 1)`
@@ -340,7 +340,7 @@ router.get("/admin/stores/:userId", requireAuth, async (req, res) => {
 
     res.json({
       store: {
-        userId: Number(storeRow.userId),
+        userId: storeRow.userId,
         storeName: storeRow.storeName || "Unknown",
         ownerName: storeRow.ownerName || "",
         ownerEmail: storeRow.ownerEmail || "",
@@ -362,14 +362,14 @@ router.get("/admin/stores/:userId", requireAuth, async (req, res) => {
         id: Number(s.id),
         total: s.total != null ? Number(s.total) : null,
         paymentMethod: s.paymentMethod || null,
-        createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : s.createdAt || null,
+        createdAt: s.createdAt || null,
         itemCount: Number(s.itemCount),
       })),
       expenses: expensesResult.rows.map((e: any) => ({
         id: Number(e.id),
         description: e.description || null,
         amount: e.amount != null ? Number(e.amount) : null,
-        createdAt: e.createdAt instanceof Date ? e.createdAt.toISOString() : e.createdAt || null,
+        createdAt: e.createdAt || null,
       })),
       aiMemoryCount: Number((aiResult.rows[0] as any)?.count ?? 0),
     });
@@ -389,9 +389,9 @@ router.get("/admin/ai-usage", requireAuth, async (req, res) => {
         COALESCE(mem.count, 0) as "memoryCount",
         mem.last_activity as "lastActivity"
       FROM users u
-      LEFT JOIN settings s ON s.user_id = u.id
+      LEFT JOIN user_settings s ON s.user_id = u.id
       LEFT JOIN (
-        SELECT tenant_id, COUNT(*) as count, MAX(created_at) as last_activity
+        SELECT tenant_id, COUNT(*) as count, MAX(created_at::timestamptz) as last_activity
         FROM ai_memories
         GROUP BY tenant_id
       ) mem ON mem.tenant_id = u.tenant_id
@@ -400,14 +400,13 @@ router.get("/admin/ai-usage", requireAuth, async (req, res) => {
 
     res.json(
       result.rows.map((row: any) => ({
-        userId: Number(row.userId),
+        userId: row.userId,
         tenantId: row.tenantId || null,
         storeName: row.storeName || "Unknown",
         memoryCount: Number(row.memoryCount),
-        lastActivity:
-          row.lastActivity instanceof Date
-            ? row.lastActivity.toISOString()
-            : row.lastActivity || null,
+        lastActivity: row.lastActivity instanceof Date
+          ? row.lastActivity.toISOString()
+          : row.lastActivity || null,
       }))
     );
   } catch (err) {

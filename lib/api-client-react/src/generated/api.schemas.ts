@@ -44,7 +44,7 @@ export interface DashboardMetrics {
 }
 
 export interface AdminUser {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: string;
@@ -71,7 +71,7 @@ export interface RevenueAnalytics {
 }
 
 export interface StoreRevenueSummary {
-  userId: number;
+  userId: string;
   storeName: string;
   revenue: number;
   salesCount: number;
@@ -79,7 +79,7 @@ export interface StoreRevenueSummary {
 }
 
 export interface StoreSummary {
-  userId: number;
+  userId: string;
   storeName: string;
   ownerName: string;
   ownerEmail: string;
@@ -123,7 +123,7 @@ export interface StoreDetail {
 }
 
 export interface AiUsageEntry {
-  userId: number;
+  userId: string;
   tenantId?: string | null;
   storeName: string;
   memoryCount: number;

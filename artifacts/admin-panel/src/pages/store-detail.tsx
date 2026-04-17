@@ -9,7 +9,7 @@ import { format } from "date-fns";
 
 export default function StoreDetail() {
   const params = useParams();
-  const userId = parseInt(params.id || "0", 10);
+  const userId = params.id || "";
 
   const { data: detail, isLoading } = useGetStoreDetail(userId, {
     query: {

@@ -139,7 +139,7 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
       responses:
         "200":
           description: User banned
@@ -160,7 +160,7 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
       responses:
         "200":
           description: User unbanned
@@ -237,7 +237,7 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
       responses:
         "200":
           description: Store detail
@@ -331,19 +331,19 @@ components:
       type: object
       properties:
         totalUsers:
-          type: integer
+          type: string
         totalRevenue:
           type: number
         newSignupsThisWeek:
-          type: integer
+          type: string
         activeStores:
-          type: integer
+          type: string
         totalSales:
-          type: integer
+          type: string
         totalExpenses:
           type: number
         bannedUsers:
-          type: integer
+          type: string
         revenueThisMonth:
           type: number
       required:
@@ -360,7 +360,7 @@ components:
       type: object
       properties:
         id:
-          type: integer
+          type: string
         name:
           type: string
         email:
@@ -403,7 +403,7 @@ components:
         revenue:
           type: number
         sales:
-          type: integer
+          type: string
       required:
         - date
         - revenue
@@ -419,7 +419,7 @@ components:
         totalRevenue:
           type: number
         totalSales:
-          type: integer
+          type: string
         averageOrderValue:
           type: number
       required:
@@ -432,13 +432,13 @@ components:
       type: object
       properties:
         userId:
-          type: integer
+          type: string
         storeName:
           type: string
         revenue:
           type: number
         salesCount:
-          type: integer
+          type: string
         businessType:
           type: string
           nullable: true
@@ -452,7 +452,7 @@ components:
       type: object
       properties:
         userId:
-          type: integer
+          type: string
         storeName:
           type: string
         ownerName:
@@ -468,9 +468,9 @@ components:
         revenue:
           type: number
         salesCount:
-          type: integer
+          type: string
         productCount:
-          type: integer
+          type: string
         isBanned:
           type: boolean
           nullable: true
@@ -501,7 +501,7 @@ components:
           items:
             $ref: "#/components/schemas/StoreExpense"
         aiMemoryCount:
-          type: integer
+          type: string
       required:
         - store
         - products
@@ -513,7 +513,7 @@ components:
       type: object
       properties:
         id:
-          type: integer
+          type: string
         name:
           type: string
         price:
@@ -523,7 +523,7 @@ components:
           type: string
           nullable: true
         stock:
-          type: integer
+          type: string
           nullable: true
       required:
         - id
@@ -533,7 +533,7 @@ components:
       type: object
       properties:
         id:
-          type: integer
+          type: string
         total:
           type: number
           nullable: true
@@ -544,7 +544,7 @@ components:
           type: string
           nullable: true
         itemCount:
-          type: integer
+          type: string
       required:
         - id
         - itemCount
@@ -553,7 +553,7 @@ components:
       type: object
       properties:
         id:
-          type: integer
+          type: string
         description:
           type: string
           nullable: true
@@ -570,14 +570,14 @@ components:
       type: object
       properties:
         userId:
-          type: integer
+          type: string
         tenantId:
           type: string
           nullable: true
         storeName:
           type: string
         memoryCount:
-          type: integer
+          type: string
         lastActivity:
           type: string
           nullable: true
