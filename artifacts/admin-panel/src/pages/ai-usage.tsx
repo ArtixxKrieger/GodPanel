@@ -1,98 +1,134 @@
 import { useGetAiUsage } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BrainCircuit, Search } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { BrainCircuit, Search, Sparkles, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 export default function AiUsage() {
   const { data: usage, isLoading } = useGetAiUsage();
   const [search, setSearch] = useState("");
 
-  const filteredUsage = usage?.filter(u => 
-    u.storeName.toLowerCase().includes(search.toLowerCase()) || 
-    (u.tenantId && u.tenantId.toLowerCase().includes(search.toLowerCase()))
-  ) || [];
+  const totalMemories = useMemo(() => usage?.reduce((sum, u) => sum + u.memoryCount, 0) ?? 0, [usage]);
+  const activeStores = useMemo(() => usage?.filter(u => u.memoryCount > 0).length ?? 0, [usage]);
+  const maxCount = useMemo(() => Math.max(...(usage?.map(u => u.memoryCount) ?? [1])), [usage]);
 
-  const totalMemories = usage?.reduce((sum, u) => sum + u.memoryCount, 0) || 0;
+  const filtered = useMemo(() =>
+    usage?.filter(u =>
+      u.storeName.toLowerCase().includes(search.toLowerCase()) ||
+      (u.tenantId?.toLowerCase().includes(search.toLowerCase()))
+    ) ?? [],
+    [usage, search]
+  );
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">AI Usage</h1>
-        <p className="text-muted-foreground mt-1">Monitor AI memory consumption across merchants.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">AI Usage</h1>
+        <p className="text-muted-foreground text-sm mt-0.5">Monitor AI memory consumption across all merchants.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-primary/10 border-primary/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-primary flex items-center gap-2">
-              <BrainCircuit className="w-4 h-4" /> Global AI Memories
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-primary">
-              {new Intl.NumberFormat('en-US').format(totalMemories)}
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {[
+          { label: "Total AI Memories", value: totalMemories.toLocaleString(), icon: BrainCircuit, color: "text-primary", bg: "bg-primary/10" },
+          { label: "Stores Using AI", value: activeStores.toString(), icon: Sparkles, color: "text-violet-400", bg: "bg-violet-400/10" },
+          { label: "Avg per Store", value: activeStores > 0 ? Math.round(totalMemories / activeStores).toLocaleString() : "0", icon: Clock, color: "text-blue-400", bg: "bg-blue-400/10" },
+        ].map(item => {
+          const Icon = item.icon;
+          return (
+            <Card key={item.label} className="bg-card/50 border-border/60 col-span-1 last:col-span-2 sm:last:col-span-1">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-muted-foreground">{item.label}</p>
+                  <div className={`w-7 h-7 rounded-lg ${item.bg} flex items-center justify-center`}>
+                    <Icon className={`w-3.5 h-3.5 ${item.color}`} />
+                  </div>
+                </div>
+                {isLoading ? <Skeleton className="h-7 w-16" /> : (
+                  <p className={`text-2xl font-bold ${item.color}`}>{item.value}</p>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Table */}
+      <Card className="bg-card/50 border-border/60">
+        <CardHeader className="border-b border-border/50 pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <BrainCircuit className="w-4 h-4 text-primary" /> Usage per Store
+              </CardTitle>
+              <CardDescription>AI memory embeddings stored per merchant</CardDescription>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="bg-card/50 border-border/50">
-        <CardHeader className="pb-3 border-b border-border/50 flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-lg">Usage per Store</CardTitle>
-            <CardDescription>Distribution of AI memory embeddings</CardDescription>
-          </div>
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search stores..."
-              className="pl-9 h-9 bg-background/50 border-border"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <div className="relative w-full sm:w-56">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search stores…"
+                className="pl-9 h-9 bg-background/50 border-border/60"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead>Store Name</TableHead>
-                <TableHead>Tenant ID</TableHead>
-                <TableHead className="text-right">Memory Count</TableHead>
-                <TableHead className="text-right">Last Activity</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
-                    Loading AI usage data...
-                  </TableCell>
-                </TableRow>
-              ) : filteredUsage.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
-                    No records found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredUsage.map((entry) => (
-                  <TableRow key={entry.userId} className="hover:bg-muted/30">
-                    <TableCell className="font-medium">{entry.storeName}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground font-mono">{entry.tenantId || "—"}</TableCell>
-                    <TableCell className="text-right font-medium text-primary">{entry.memoryCount}</TableCell>
-                    <TableCell className="text-right text-sm text-muted-foreground">
-                      {entry.lastActivity ? format(new Date(entry.lastActivity), "MMM d, yyyy HH:mm") : "—"}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          {isLoading ? (
+            <div className="p-4 space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="w-9 h-9 rounded-lg" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-2 w-full rounded-full" />
+                  </div>
+                  <Skeleton className="h-4 w-12" />
+                </div>
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-16 text-center text-muted-foreground text-sm">No AI usage data found.</div>
+          ) : (
+            <ul className="divide-y divide-border/40">
+              {filtered.map((entry) => {
+                const pct = maxCount > 0 ? (entry.memoryCount / maxCount) * 100 : 0;
+                return (
+                  <li key={entry.userId} className="px-4 py-3.5 hover:bg-muted/20 transition-colors">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                        <BrainCircuit className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <p className="font-medium text-sm truncate">{entry.storeName}</p>
+                          <span className="text-sm font-bold text-primary shrink-0">{entry.memoryCount.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <p className="text-xs text-muted-foreground font-mono truncate">{entry.tenantId || "—"}</p>
+                          {entry.lastActivity && (
+                            <p className="text-xs text-muted-foreground shrink-0 hidden sm:block">
+                              · {format(new Date(entry.lastActivity), "MMM d, yyyy")}
+                            </p>
+                          )}
+                        </div>
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </CardContent>
       </Card>
     </div>
