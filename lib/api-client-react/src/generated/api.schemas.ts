@@ -32,15 +32,34 @@ export interface ActionResponse {
   message: string;
 }
 
+export interface RecentSignup {
+  id: string;
+  name: string;
+  email: string;
+  storeName: string;
+  plan: string;
+  createdAt?: string | null;
+}
+
+export interface SubscriptionPlanCount {
+  plan: string;
+  count: number;
+}
+
 export interface DashboardMetrics {
   totalUsers: number;
-  totalRevenue: number;
   newSignupsThisWeek: number;
-  activeStores: number;
-  totalSales: number;
-  totalExpenses: number;
   bannedUsers: number;
+  platformRevenue: number;
   revenueThisMonth: number;
+  activeSubscriptions: number;
+  freeUsers: number;
+  pendingPayments: number;
+  totalPosRevenue: number;
+  totalPosSales: number;
+  activeStores: number;
+  recentSignups: RecentSignup[];
+  subscriptionBreakdown: SubscriptionPlanCount[];
 }
 
 export interface AdminUser {

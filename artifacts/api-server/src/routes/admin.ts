@@ -42,48 +42,72 @@ router.get("/admin/dashboard", requireAuth, async (req, res) => {
   try {
     const [
       totalUsersResult,
-      totalRevenueResult,
       newSignupsResult,
-      totalSalesResult,
-      totalExpensesResult,
       bannedUsersResult,
+      platformRevenueResult,
       revenueThisMonthResult,
+      activeSubscriptionsResult,
+      freeUsersResult,
+      pendingPaymentsResult,
+      totalPosRevenueResult,
+      totalPosSalesResult,
+      activeStoresResult,
+      recentSignupsResult,
+      subscriptionBreakdownResult,
     ] = await Promise.all([
       db.execute(sql`SELECT COUNT(*) as count FROM users`),
-      db.execute(sql`SELECT COALESCE(SUM(CAST(total AS NUMERIC)), 0) as sum FROM sales`),
-      db.execute(
-        sql`SELECT COUNT(*) as count FROM users WHERE created_at::timestamptz >= NOW() - INTERVAL '7 days'`
-      ),
-      db.execute(sql`SELECT COUNT(*) as count FROM sales`),
-      db.execute(sql`SELECT COALESCE(SUM(CAST(amount AS NUMERIC)), 0) as sum FROM expenses`),
+      db.execute(sql`SELECT COUNT(*) as count FROM users WHERE created_at::timestamptz >= NOW() - INTERVAL '7 days'`),
       db.execute(sql`SELECT COUNT(*) as count FROM users WHERE is_banned = true`),
-      db.execute(
-        sql`SELECT COALESCE(SUM(CAST(total AS NUMERIC)), 0) as sum FROM sales WHERE created_at::timestamptz >= DATE_TRUNC('month', NOW())`
-      ),
+      db.execute(sql`SELECT COALESCE(SUM(amount), 0) as sum FROM subscription_payments WHERE status = 'paid'`),
+      db.execute(sql`SELECT COALESCE(SUM(amount), 0) as sum FROM subscription_payments WHERE status = 'paid' AND paid_at::timestamptz >= DATE_TRUNC('month', NOW())`),
+      db.execute(sql`SELECT COUNT(*) as count FROM tenant_subscriptions WHERE plan != 'free' AND status = 'active'`),
+      db.execute(sql`SELECT COUNT(*) as count FROM tenant_subscriptions WHERE plan = 'free'`),
+      db.execute(sql`SELECT COUNT(*) as count FROM subscription_payments WHERE status = 'pending'`),
+      db.execute(sql`SELECT COALESCE(SUM(CAST(total AS NUMERIC)), 0) as sum FROM sales`),
+      db.execute(sql`SELECT COUNT(*) as count FROM sales`),
+      db.execute(sql`SELECT COUNT(DISTINCT user_id) as count FROM sales WHERE created_at::timestamptz >= NOW() - INTERVAL '30 days'`),
+      db.execute(sql`
+        SELECT u.id, u.name, u.email, u.created_at,
+               COALESCE(s.store_name, u.name) as "storeName",
+               ts.plan
+        FROM users u
+        LEFT JOIN user_settings s ON s.user_id = u.id
+        LEFT JOIN tenant_subscriptions ts ON ts.tenant_id = u.tenant_id
+        ORDER BY u.created_at::timestamptz DESC
+        LIMIT 5
+      `),
+      db.execute(sql`
+        SELECT plan, COUNT(*) as count
+        FROM tenant_subscriptions
+        WHERE status = 'active'
+        GROUP BY plan
+      `),
     ]);
 
-    const totalUsers = Number((totalUsersResult.rows[0] as any)?.count ?? 0);
-    const totalRevenue = Number((totalRevenueResult.rows[0] as any)?.sum ?? 0);
-    const newSignupsThisWeek = Number((newSignupsResult.rows[0] as any)?.count ?? 0);
-    const totalSales = Number((totalSalesResult.rows[0] as any)?.count ?? 0);
-    const totalExpenses = Number((totalExpensesResult.rows[0] as any)?.sum ?? 0);
-    const bannedUsers = Number((bannedUsersResult.rows[0] as any)?.count ?? 0);
-    const revenueThisMonth = Number((revenueThisMonthResult.rows[0] as any)?.sum ?? 0);
-
-    const activeStoresResult = await db.execute(
-      sql`SELECT COUNT(DISTINCT user_id) as count FROM sales WHERE created_at::timestamptz >= NOW() - INTERVAL '30 days'`
-    );
-    const activeStores = Number((activeStoresResult.rows[0] as any)?.count ?? 0);
-
     res.json({
-      totalUsers,
-      totalRevenue,
-      newSignupsThisWeek,
-      activeStores,
-      totalSales,
-      totalExpenses,
-      bannedUsers,
-      revenueThisMonth,
+      totalUsers: Number((totalUsersResult.rows[0] as any)?.count ?? 0),
+      newSignupsThisWeek: Number((newSignupsResult.rows[0] as any)?.count ?? 0),
+      bannedUsers: Number((bannedUsersResult.rows[0] as any)?.count ?? 0),
+      platformRevenue: Number((platformRevenueResult.rows[0] as any)?.sum ?? 0),
+      revenueThisMonth: Number((revenueThisMonthResult.rows[0] as any)?.sum ?? 0),
+      activeSubscriptions: Number((activeSubscriptionsResult.rows[0] as any)?.count ?? 0),
+      freeUsers: Number((freeUsersResult.rows[0] as any)?.count ?? 0),
+      pendingPayments: Number((pendingPaymentsResult.rows[0] as any)?.count ?? 0),
+      totalPosRevenue: Number((totalPosRevenueResult.rows[0] as any)?.sum ?? 0),
+      totalPosSales: Number((totalPosSalesResult.rows[0] as any)?.count ?? 0),
+      activeStores: Number((activeStoresResult.rows[0] as any)?.count ?? 0),
+      recentSignups: (recentSignupsResult.rows as any[]).map(r => ({
+        id: r.id,
+        name: r.name || "",
+        email: r.email || "",
+        storeName: r.storeName || "",
+        plan: r.plan || "free",
+        createdAt: r.created_at || null,
+      })),
+      subscriptionBreakdown: (subscriptionBreakdownResult.rows as any[]).map(r => ({
+        plan: r.plan,
+        count: Number(r.count),
+      })),
     });
   } catch (err) {
     req.log.error({ err }, "Dashboard error");
