@@ -16,7 +16,7 @@ const regionDetails = [
 
 const weights = [0.52, 0.12, 0.11, 0.08, 0.06, 0.04, 0.04, 0.03];
 
-export default function GeoMap() {
+export default function GeoMap({ onMenuOpen }: { onMenuOpen?: () => void }) {
   const [users, setUsers] = useState<number>(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [data, setData] = useState(regionDetails.map((r, i) => ({ ...r, users: 0 })));
@@ -38,7 +38,7 @@ export default function GeoMap() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="Global User Map" subtitle="User distribution worldwide" />
+      <TopBar title="Global User Map" subtitle="User distribution worldwide" onMenuOpen={onMenuOpen} />
       <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
         {/* Map + Stats */}

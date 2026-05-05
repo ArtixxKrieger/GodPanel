@@ -29,14 +29,14 @@ const activities = [
   { id: "12", type: "sale" as const, message: "High-value sale", detail: "₱78,500 from SM Mini Store", ts: new Date(Date.now() - 240 * 60000), ip: "119.92.11.3" },
 ];
 
-export default function Activity() {
+export default function Activity({ onMenuOpen }: { onMenuOpen?: () => void }) {
   const [filter, setFilter] = useState<EventType>("all");
 
   const filtered = filter === "all" ? activities : activities.filter((a) => a.type === filter);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="Activity Log" subtitle="Real-time platform events" />
+      <TopBar title="Activity Log" subtitle="Real-time platform events" onMenuOpen={onMenuOpen} />
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
 
         {/* Filters */}

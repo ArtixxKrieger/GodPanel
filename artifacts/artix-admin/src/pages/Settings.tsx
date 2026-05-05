@@ -3,7 +3,7 @@ import { Settings, Bell, Shield, Globe, Key, Save, RefreshCw, Zap } from "lucide
 import TopBar from "@/components/TopBar";
 import { api } from "@/lib/api";
 
-export default function SettingsPage() {
+export default function SettingsPage({ onMenuOpen }: { onMenuOpen?: () => void }) {
   const [apiHealth, setApiHealth] = useState<any>(null);
   const [checking, setChecking] = useState(false);
 
@@ -30,7 +30,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="Settings" subtitle="Admin panel configuration" />
+      <TopBar title="Settings" subtitle="Admin panel configuration" onMenuOpen={onMenuOpen} />
       <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
         {/* API Health */}

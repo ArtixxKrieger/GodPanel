@@ -20,7 +20,7 @@ const threatLog = [
   { id: "4", level: "low", desc: "Rate limit triggered", ip: "203.0.113.99", time: "2h ago" },
 ];
 
-export default function Security() {
+export default function Security({ onMenuOpen }: { onMenuOpen?: () => void }) {
   const [scanLoading, setScanLoading] = useState(false);
   const [lastScan, setLastScan] = useState("3 minutes ago");
 
@@ -38,7 +38,7 @@ export default function Security() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="Security Center" subtitle="Platform security overview & threat monitoring" />
+      <TopBar title="Security Center" subtitle="Platform security overview & threat monitoring" onMenuOpen={onMenuOpen} />
       <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
         {/* Score */}

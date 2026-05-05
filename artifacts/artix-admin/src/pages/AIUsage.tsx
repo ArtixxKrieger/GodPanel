@@ -5,7 +5,7 @@ import { formatRelative, getInitials, avatarColor } from "@/lib/utils";
 import TopBar from "@/components/TopBar";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-export default function AIUsage() {
+export default function AIUsage({ onMenuOpen }: { onMenuOpen?: () => void }) {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -29,7 +29,7 @@ export default function AIUsage() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="AI Usage" subtitle="Memory usage per store" />
+      <TopBar title="AI Usage" subtitle="Memory usage per store" onMenuOpen={onMenuOpen} />
       <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
         {/* Stats */}

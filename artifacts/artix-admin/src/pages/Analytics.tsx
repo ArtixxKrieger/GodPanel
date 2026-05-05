@@ -38,7 +38,7 @@ const radarData = [
   { metric: "Engagement", A: 70 },
 ];
 
-export default function Analytics() {
+export default function Analytics({ onMenuOpen }: { onMenuOpen?: () => void }) {
   const [metrics, setMetrics] = useState<any>(null);
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export default function Analytics() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="Analytics" subtitle="Platform health and growth insights" />
+      <TopBar title="Analytics" subtitle="Platform health and growth insights" onMenuOpen={onMenuOpen} />
       <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
         {/* Key KPIs */}

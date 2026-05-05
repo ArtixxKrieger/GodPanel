@@ -22,7 +22,7 @@ interface Metrics {
 
 interface RevenuePoint { date: string; revenue: number; sales: string; }
 
-export default function Dashboard() {
+export default function Dashboard({ onMenuOpen }: { onMenuOpen?: () => void }) {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [revenue, setRevenue] = useState<RevenuePoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +57,7 @@ export default function Dashboard() {
       <TopBar
         title="Overview"
         subtitle="Here's what's happening with ArtixPOS today."
+        onMenuOpen={onMenuOpen}
       />
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
 

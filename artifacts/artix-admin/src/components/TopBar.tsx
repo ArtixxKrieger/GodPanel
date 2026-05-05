@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
-import { Bell, Search, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
+import { Bell, Search, RefreshCw, AlertCircle, Menu } from "lucide-react";
 import { api } from "@/lib/api";
 
 interface TopBarProps {
   title: string;
   subtitle?: string;
+  onMenuOpen?: () => void;
 }
 
-export default function TopBar({ title, subtitle }: TopBarProps) {
+export default function TopBar({ title, subtitle, onMenuOpen }: TopBarProps) {
   const [health, setHealth] = useState<{ status: string; latency?: number } | null>(null);
-  const [search, setSearch] = useState("");
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -33,27 +33,32 @@ export default function TopBar({ title, subtitle }: TopBarProps) {
   }, []);
 
   return (
-    <header className="flex items-center gap-4 px-6 py-4 border-b border-border/60 bg-card/60 backdrop-blur-sm sticky top-0 z-10">
+    <header className="flex items-center gap-3 px-4 md:px-6 py-3 md:py-4 border-b border-border/60 bg-card/60 backdrop-blur-sm sticky top-0 z-10">
+      {/* Hamburger — mobile only */}
+      <button
+        onClick={onMenuOpen}
+        className="md:hidden p-2 rounded-lg bg-secondary border border-border hover:bg-secondary/80 transition-colors flex-shrink-0"
+      >
+        <Menu className="w-4 h-4 text-muted-foreground" />
+      </button>
+
       <div className="flex-1 min-w-0">
-        <h1 className="text-lg font-bold text-foreground truncate">{title}</h1>
-        {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+        <h1 className="text-base md:text-lg font-bold text-foreground truncate">{title}</h1>
+        {subtitle && <p className="text-xs text-muted-foreground hidden sm:block">{subtitle}</p>}
       </div>
 
-      {/* Search */}
+      {/* Search — hidden on small mobile */}
       <div className="relative hidden sm:block">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
         <input
           type="text"
-          placeholder="Search anything..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-52 pl-9 pr-4 py-2 text-xs bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50"
+          placeholder="Search..."
+          className="w-36 md:w-52 pl-9 pr-4 py-2 text-xs bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50"
         />
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono border border-border/60 rounded px-1">⌘K</span>
       </div>
 
-      {/* Time */}
-      <div className="hidden md:flex flex-col items-end">
+      {/* Time — desktop only */}
+      <div className="hidden lg:flex flex-col items-end">
         <span className="text-xs font-mono text-foreground">
           {time.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
         </span>
@@ -63,7 +68,7 @@ export default function TopBar({ title, subtitle }: TopBarProps) {
       </div>
 
       {/* API Status */}
-      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary border border-border text-xs">
+      <div className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-lg bg-secondary border border-border text-xs flex-shrink-0">
         {health?.status === "ok" ? (
           <>
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -80,7 +85,7 @@ export default function TopBar({ title, subtitle }: TopBarProps) {
       </div>
 
       {/* Notifications */}
-      <button className="relative w-8 h-8 flex items-center justify-center rounded-lg bg-secondary border border-border hover:bg-secondary/80 transition-colors">
+      <button className="relative w-8 h-8 flex items-center justify-center rounded-lg bg-secondary border border-border hover:bg-secondary/80 transition-colors flex-shrink-0">
         <Bell className="w-4 h-4 text-muted-foreground" />
         <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-emerald-400" />
       </button>

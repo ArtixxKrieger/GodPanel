@@ -7,7 +7,7 @@ import TopBar from "@/components/TopBar";
 type SortKey = "name" | "email" | "role" | "revenueTotal" | "createdAt";
 type SortDir = "asc" | "desc";
 
-export default function Users() {
+export default function Users({ onMenuOpen }: { onMenuOpen?: () => void }) {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -95,7 +95,7 @@ export default function Users() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="User Management" subtitle={`${users.length} total users`} />
+      <TopBar title="User Management" subtitle={`${users.length} total users`} onMenuOpen={onMenuOpen} />
 
       {/* Toast */}
       {toast && (

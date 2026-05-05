@@ -3,7 +3,7 @@ import { useLocation, Link } from "wouter";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Users, Store, TrendingUp, Brain, Settings,
-  ChevronLeft, ChevronRight, Activity, Zap,
+  ChevronLeft, ChevronRight, Activity, Zap, X,
   Shield, Globe, BarChart3
 } from "lucide-react";
 
@@ -19,27 +19,32 @@ const navItems = [
   { href: "/geo", icon: Globe, label: "Geo Map", badge: null },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  mobileOpen: boolean;
+  onMobileClose: () => void;
+}
+
+export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const [location] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
-  return (
-    <aside
-      className={cn(
-        "flex flex-col h-screen border-r border-border/60 bg-sidebar transition-all duration-300 ease-in-out flex-shrink-0",
-        collapsed ? "w-16" : "w-60"
-      )}
-    >
+  const sidebarContent = (isMobile = false) => (
+    <>
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-border/40">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-emerald-500/20">
           <Zap className="w-4 h-4 text-white" />
         </div>
-        {!collapsed && (
-          <div className="min-w-0">
+        {(!collapsed || isMobile) && (
+          <div className="min-w-0 flex-1">
             <div className="text-sm font-bold text-foreground tracking-tight">ArtixPOS</div>
             <div className="text-[10px] text-emerald-400 font-semibold uppercase tracking-widest">Admin Panel</div>
           </div>
+        )}
+        {isMobile && (
+          <button onClick={onMobileClose} className="p-1 rounded-lg hover:bg-secondary transition-colors ml-auto">
+            <X className="w-4 h-4 text-muted-foreground" />
+          </button>
         )}
       </div>
 
@@ -48,20 +53,20 @@ export default function Sidebar() {
         {navItems.map(({ href, icon: Icon, label, badge }) => {
           const active = href === "/" ? location === "/" : location.startsWith(href);
           return (
-            <Link key={href} href={href}>
+            <Link key={href} href={href} onClick={isMobile ? onMobileClose : undefined}>
               <div
                 className={cn(
                   "sidebar-nav-item",
                   active && "active",
-                  collapsed && "justify-center px-0"
+                  !isMobile && collapsed && "justify-center px-0"
                 )}
-                title={collapsed ? label : undefined}
+                title={!isMobile && collapsed ? label : undefined}
               >
                 <Icon className="w-4 h-4 flex-shrink-0" />
-                {!collapsed && (
+                {(isMobile || !collapsed) && (
                   <span className="flex-1">{label}</span>
                 )}
-                {!collapsed && badge && (
+                {(isMobile || !collapsed) && badge && (
                   <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                     {badge}
                   </span>
@@ -74,21 +79,47 @@ export default function Sidebar() {
 
       {/* Bottom */}
       <div className="border-t border-border/40 px-2 py-3">
-        <Link href="/settings">
-          <div className={cn("sidebar-nav-item", location === "/settings" && "active", collapsed && "justify-center px-0")}>
+        <Link href="/settings" onClick={isMobile ? onMobileClose : undefined}>
+          <div className={cn("sidebar-nav-item", location === "/settings" && "active", !isMobile && collapsed && "justify-center px-0")}>
             <Settings className="w-4 h-4 flex-shrink-0" />
-            {!collapsed && <span>Settings</span>}
+            {(isMobile || !collapsed) && <span>Settings</span>}
           </div>
         </Link>
       </div>
 
-      {/* Collapse toggle */}
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center py-3 border-t border-border/40 text-muted-foreground hover:text-foreground transition-colors"
+      {/* Collapse toggle — desktop only */}
+      {!isMobile && (
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="flex items-center justify-center py-3 border-t border-border/40 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+        </button>
+      )}
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar — hidden on mobile */}
+      <aside
+        className={cn(
+          "hidden md:flex flex-col h-screen border-r border-border/60 bg-sidebar transition-all duration-300 ease-in-out flex-shrink-0",
+          collapsed ? "w-16" : "w-60"
+        )}
       >
-        {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-      </button>
-    </aside>
+        {sidebarContent(false)}
+      </aside>
+
+      {/* Mobile drawer — fixed slide-in */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex flex-col w-72 border-r border-border/60 bg-sidebar transition-transform duration-300 ease-in-out md:hidden",
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {sidebarContent(true)}
+      </aside>
+    </>
   );
 }

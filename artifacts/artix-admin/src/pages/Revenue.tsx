@@ -10,7 +10,7 @@ import {
 
 type Period = "7d" | "30d" | "90d" | "1y";
 
-export default function Revenue() {
+export default function Revenue({ onMenuOpen }: { onMenuOpen?: () => void }) {
   const [period, setPeriod] = useState<Period>("30d");
   const [data, setData] = useState<any>(null);
   const [topStores, setTopStores] = useState<any[]>([]);
@@ -29,7 +29,7 @@ export default function Revenue() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="Revenue Analytics" subtitle="Financial performance across the platform" />
+      <TopBar title="Revenue Analytics" subtitle="Financial performance across the platform" onMenuOpen={onMenuOpen} />
 
       <div className="flex-1 overflow-y-auto p-6 space-y-5">
         {/* Period selector */}

@@ -4,7 +4,7 @@ import { api, StoreSummary, StoreDetail } from "@/lib/api";
 import { formatCurrency, formatDate, getInitials, avatarColor, cn } from "@/lib/utils";
 import TopBar from "@/components/TopBar";
 
-export default function Stores() {
+export default function Stores({ onMenuOpen }: { onMenuOpen?: () => void }) {
   const [stores, setStores] = useState<StoreSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -35,7 +35,7 @@ export default function Stores() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="Store Explorer" subtitle={`${stores.length} stores across the platform`} />
+      <TopBar title="Store Explorer" subtitle={`${stores.length} stores across the platform`} onMenuOpen={onMenuOpen} />
 
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {/* Stats */}
