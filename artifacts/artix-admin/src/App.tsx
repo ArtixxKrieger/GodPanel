@@ -1,8 +1,5 @@
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
-import { isAuthenticated, clearToken } from "@/lib/api";
-import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Users from "@/pages/Users";
 import Stores from "@/pages/Stores";
@@ -21,24 +18,9 @@ const queryClient = new QueryClient({
 });
 
 function AppShell() {
-  const [authed, setAuthed] = useState(isAuthenticated());
-
-  useEffect(() => {
-    setAuthed(isAuthenticated());
-  }, []);
-
-  if (!authed) {
-    return <Login onLogin={() => setAuthed(true)} />;
-  }
-
-  const handleLogout = () => {
-    clearToken();
-    setAuthed(false);
-  };
-
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar onLogout={handleLogout} />
+      <Sidebar />
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Switch>
           <Route path="/" component={Dashboard} />

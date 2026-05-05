@@ -1,34 +1,12 @@
 const BASE_URL = "https://artix-pos.vercel.app/api";
 
-function getToken(): string | null {
-  return localStorage.getItem("artix_admin_token");
-}
-
-export function setToken(token: string) {
-  localStorage.setItem("artix_admin_token", token);
-}
-
-export function clearToken() {
-  localStorage.removeItem("artix_admin_token");
-}
-
-export function isAuthenticated(): boolean {
-  return !!getToken();
-}
-
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string> || {}),
   };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
-  if (res.status === 401) {
-    clearToken();
-    window.location.reload();
-  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));
     throw new Error(err.message || err.error || "Request failed");
@@ -38,10 +16,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   health: () => request<{ status: string; uptime: number; ts: string; services: Record<string, { status: string; latencyMs: number }> }>("/health"),
-  login: (password: string) => request<{ token: string; message: string }>("/admin/login", {
-    method: "POST",
-    body: JSON.stringify({ password }),
-  }),
   me: () => request<{ admin: boolean; iat: number }>("/admin/me"),
   dashboard: () => request<{
     totalUsers: string;

@@ -3,10 +3,9 @@ import { useLocation, Link } from "wouter";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Users, Store, TrendingUp, Brain, Settings,
-  LogOut, ChevronLeft, ChevronRight, Activity, Bell, Zap,
+  ChevronLeft, ChevronRight, Activity, Zap,
   Shield, Globe, BarChart3
 } from "lucide-react";
-import { clearToken } from "@/lib/api";
 
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Overview", badge: null },
@@ -20,11 +19,7 @@ const navItems = [
   { href: "/geo", icon: Globe, label: "Geo Map", badge: null },
 ];
 
-interface SidebarProps {
-  onLogout: () => void;
-}
-
-export default function Sidebar({ onLogout }: SidebarProps) {
+export default function Sidebar() {
   const [location] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -78,20 +73,13 @@ export default function Sidebar({ onLogout }: SidebarProps) {
       </nav>
 
       {/* Bottom */}
-      <div className="border-t border-border/40 px-2 py-3 space-y-0.5">
+      <div className="border-t border-border/40 px-2 py-3">
         <Link href="/settings">
           <div className={cn("sidebar-nav-item", location === "/settings" && "active", collapsed && "justify-center px-0")}>
             <Settings className="w-4 h-4 flex-shrink-0" />
             {!collapsed && <span>Settings</span>}
           </div>
         </Link>
-        <button
-          onClick={onLogout}
-          className={cn("sidebar-nav-item w-full hover:text-red-400 hover:bg-red-500/10", collapsed && "justify-center px-0")}
-        >
-          <LogOut className="w-4 h-4 flex-shrink-0" />
-          {!collapsed && <span>Logout</span>}
-        </button>
       </div>
 
       {/* Collapse toggle */}
