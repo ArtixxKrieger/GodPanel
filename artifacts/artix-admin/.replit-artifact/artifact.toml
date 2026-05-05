@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "ArtixPOS Admin Dashboard"
+version = "1.0.0"
+id = "artifacts/artix-admin"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22273
+
+[services.development]
+run = "pnpm --filter @workspace/artix-admin run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/artix-admin", "run", "build" ]
+publicDir = "artifacts/artix-admin/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22273"
+BASE_PATH = "/"

@@ -19,12 +19,16 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Artifacts
 
-### ArtixPOS Admin Panel (`artifacts/admin-panel`)
-- React + Vite frontend at `/` (root path)
-- Dark professional admin UI with Tailwind CSS
-- Pages: Login, Dashboard, Users, Revenue Analytics, Store Explorer, AI Usage
-- Auth: JWT stored in localStorage as `artixpos_admin_token`
-- All API calls need `Authorization: Bearer <token>` header
+### ArtixPOS Admin Dashboard (`artifacts/artix-admin`) — PRIMARY
+- React + Vite frontend at `/` (root path), port 22273
+- Advanced dark admin UI — dark green/teal/purple theme inspired by Nexora design
+- API: connects to https://artix-pos.vercel.app/api (live production backend)
+- Auth: JWT stored in localStorage as `artix_admin_token`
+- Pages: Login, Dashboard, Users, Stores, Revenue, Analytics, AI Usage, Activity, Security, Geo Map, Settings
+- Features: ban/unban users, make Pro, world map by region, real-time activity feed, charts
+
+### ArtixPOS Admin Panel (`artifacts/admin-panel`) — Legacy (not started)
+- Older admin panel, replaced by artix-admin
 
 ### API Server (`artifacts/api-server`)
 - Express 5 backend at `/api`
