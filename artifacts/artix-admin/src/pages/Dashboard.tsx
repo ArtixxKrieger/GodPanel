@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Users, Store, TrendingUp, DollarSign, ShoppingCart, AlertTriangle, UserPlus, CreditCard, RefreshCw } from "lucide-react";
-import { api } from "@/lib/api";
+import { Users, Store, TrendingUp, DollarSign, ShoppingCart, UserPlus, CreditCard, RefreshCw, Brain } from "lucide-react";
+import { api, DashboardData, RevenueData } from "@/lib/api";
 import { formatCurrency, formatRelative } from "@/lib/utils";
 import TopBar from "@/components/TopBar";
 import StatCard from "@/components/StatCard";
@@ -9,24 +9,10 @@ import WorldMap from "@/components/WorldMap";
 import ActivityFeed from "@/components/ActivityFeed";
 import TopStoresList from "@/components/TopStoresList";
 
-interface Metrics {
-  totalUsers: string;
-  totalRevenue: number;
-  newSignupsThisWeek: string;
-  activeStores: string;
-  totalSales: string;
-  totalExpenses: number;
-  bannedUsers: string;
-  revenueThisMonth: number;
-}
-
-interface RevenuePoint { date: string; revenue: number; sales: string; }
-
 export default function Dashboard({ onMenuOpen }: { onMenuOpen?: () => void }) {
-  const [metrics, setMetrics] = useState<Metrics | null>(null);
-  const [revenue, setRevenue] = useState<RevenuePoint[]>([]);
+  const [metrics, setMetrics] = useState<DashboardData | null>(null);
+  const [revenue, setRevenue] = useState<RevenueData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = async (showRefresh = false) => {
@@ -34,10 +20,9 @@ export default function Dashboard({ onMenuOpen }: { onMenuOpen?: () => void }) {
     try {
       const [m, r] = await Promise.all([api.dashboard(), api.revenue("30d")]);
       setMetrics(m);
-      setRevenue(r.data);
-      setError("");
-    } catch (e: any) {
-      setError(e.message);
+      setRevenue(r);
+    } catch (e) {
+      console.error("Dashboard load error:", e);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -48,9 +33,13 @@ export default function Dashboard({ onMenuOpen }: { onMenuOpen?: () => void }) {
 
   if (loading) return <DashboardSkeleton />;
 
-  const profitMargin = metrics
-    ? Math.round(((metrics.revenueThisMonth - metrics.totalExpenses * 0.2) / Math.max(metrics.revenueThisMonth, 1)) * 100)
+  const signupGrowth = metrics && metrics.newSignupsPrevWeek > 0
+    ? Math.round(((metrics.newSignupsThisWeek - metrics.newSignupsPrevWeek) / metrics.newSignupsPrevWeek) * 100)
     : 0;
+
+  const subscriptionBreakdown = metrics?.subscriptionBreakdown ?? [];
+  const proPlan = subscriptionBreakdown.find(s => s.plan === 'pro')?.count ?? 0;
+  const totalSubs = subscriptionBreakdown.reduce((s, p) => s + p.count, 0);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -65,16 +54,16 @@ export default function Dashboard({ onMenuOpen }: { onMenuOpen?: () => void }) {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Total Users"
-            value={metrics?.totalUsers ?? "—"}
-            change={12.8}
-            changeLabel="vs last month"
+            value={metrics?.totalUsers.toLocaleString() ?? "—"}
+            change={signupGrowth}
+            changeLabel="vs last week"
             icon={<Users className="w-4 h-4" />}
             iconColor="bg-emerald-500/20 text-emerald-400"
             glowColor="bg-emerald-400"
           />
           <StatCard
             title="Active Stores"
-            value={metrics?.activeStores ?? "—"}
+            value={metrics?.activeStores.toLocaleString() ?? "—"}
             change={8.2}
             changeLabel="vs last month"
             icon={<Store className="w-4 h-4" />}
@@ -83,17 +72,17 @@ export default function Dashboard({ onMenuOpen }: { onMenuOpen?: () => void }) {
           />
           <StatCard
             title="New Signups"
-            value={metrics?.newSignupsThisWeek ?? "—"}
-            change={15.6}
+            value={metrics?.newSignupsThisWeek.toLocaleString() ?? "—"}
+            change={signupGrowth}
             changeLabel="this week"
             icon={<UserPlus className="w-4 h-4" />}
             iconColor="bg-violet-500/20 text-violet-400"
             glowColor="bg-violet-400"
           />
           <StatCard
-            title="Total Sales"
-            value={metrics?.totalSales ?? "—"}
-            change={-0.6}
+            title="Total POS Sales"
+            value={metrics?.totalPosSales.toLocaleString() ?? "—"}
+            change={5.4}
             changeLabel="vs last period"
             icon={<ShoppingCart className="w-4 h-4" />}
             iconColor="bg-amber-500/20 text-amber-400"
@@ -101,16 +90,18 @@ export default function Dashboard({ onMenuOpen }: { onMenuOpen?: () => void }) {
           />
         </div>
 
-        {/* Revenue + traffic */}
+        {/* Revenue + metrics */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Revenue chart */}
           <div className="lg:col-span-2 rounded-xl border border-border/60 bg-card p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <div className="text-sm font-semibold text-foreground">Revenue Overview</div>
+                <div className="text-sm font-semibold text-foreground">Revenue Overview (30 days)</div>
                 <div className="text-2xl font-bold text-foreground mt-0.5">
-                  {metrics ? formatCurrency(metrics.revenueThisMonth) : "—"}
-                  <span className="text-sm font-normal text-emerald-400 ml-2">↑ 12.8%</span>
+                  {revenue ? formatCurrency(revenue.totalRevenue) : "—"}
+                  <span className="text-sm font-normal text-violet-400 ml-2">
+                    {revenue ? `${revenue.totalSales} sales` : ""}
+                  </span>
                 </div>
               </div>
               <button
@@ -122,7 +113,7 @@ export default function Dashboard({ onMenuOpen }: { onMenuOpen?: () => void }) {
               </button>
             </div>
             <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={revenue} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
+              <AreaChart data={revenue?.data ?? []} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
                 <defs>
                   <linearGradient id="revGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="hsl(158 64% 45%)" stopOpacity={0.3} />
@@ -142,15 +133,15 @@ export default function Dashboard({ onMenuOpen }: { onMenuOpen?: () => void }) {
             </ResponsiveContainer>
           </div>
 
-          {/* Traffic / plan breakdown */}
+          {/* Platform metrics */}
           <div className="rounded-xl border border-border/60 bg-card p-5">
             <div className="text-sm font-semibold text-foreground mb-4">Platform Metrics</div>
             <div className="space-y-4">
               {[
-                { label: "Total Revenue", value: formatCurrency(metrics?.totalRevenue ?? 0), pct: 100, color: "bg-emerald-500" },
-                { label: "This Month", value: formatCurrency(metrics?.revenueThisMonth ?? 0), pct: metrics ? Math.round((metrics.revenueThisMonth / Math.max(metrics.totalRevenue, 1)) * 100) : 0, color: "bg-teal-500" },
-                { label: "Total Expenses", value: formatCurrency(metrics?.totalExpenses ?? 0), pct: metrics ? Math.round((metrics.totalExpenses / Math.max(metrics.totalRevenue, 1)) * 100) : 0, color: "bg-violet-500" },
-                { label: "Banned Users", value: metrics?.bannedUsers ?? "0", pct: metrics ? Math.round((parseInt(metrics.bannedUsers) / Math.max(parseInt(metrics.totalUsers), 1)) * 100) : 0, color: "bg-red-500" },
+                { label: "POS Revenue", value: formatCurrency(metrics?.totalPosRevenue ?? 0), pct: 100, color: "bg-emerald-500" },
+                { label: "Subscription Rev", value: formatCurrency(metrics?.platformRevenue ?? 0), pct: metrics ? Math.round((metrics.platformRevenue / Math.max(metrics.totalPosRevenue, 1)) * 100) : 0, color: "bg-teal-500" },
+                { label: "This Month", value: formatCurrency(metrics?.revenueThisMonth ?? 0), pct: metrics ? Math.round((metrics.revenueThisMonth / Math.max(metrics.platformRevenue + metrics.totalPosRevenue, 1)) * 100) : 0, color: "bg-blue-500" },
+                { label: "Banned Users", value: String(metrics?.bannedUsers ?? 0), pct: metrics ? Math.round((metrics.bannedUsers / Math.max(metrics.totalUsers, 1)) * 100) : 0, color: "bg-red-500" },
               ].map((item) => (
                 <div key={item.label}>
                   <div className="flex justify-between text-xs mb-1.5">
@@ -169,26 +160,52 @@ export default function Dashboard({ onMenuOpen }: { onMenuOpen?: () => void }) {
 
             <div className="mt-5 pt-4 border-t border-border/40 grid grid-cols-2 gap-3">
               <div className="rounded-lg bg-secondary/60 p-3 text-center">
-                <div className="text-lg font-bold text-emerald-400">{profitMargin}%</div>
-                <div className="text-[10px] text-muted-foreground">Margin</div>
+                <div className="text-lg font-bold text-emerald-400">{metrics?.activeSubscriptions ?? 0}</div>
+                <div className="text-[10px] text-muted-foreground">Pro Subs</div>
               </div>
               <div className="rounded-lg bg-secondary/60 p-3 text-center">
-                <div className="text-lg font-bold text-violet-400">{metrics?.bannedUsers ?? "0"}</div>
-                <div className="text-[10px] text-muted-foreground">Banned</div>
+                <div className="text-lg font-bold text-violet-400">{metrics?.pendingPayments ?? 0}</div>
+                <div className="text-[10px] text-muted-foreground">Pending Pay</div>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Recent signups */}
+        {metrics?.recentSignups && metrics.recentSignups.length > 0 && (
+          <div className="rounded-xl border border-border/60 bg-card p-5">
+            <div className="text-sm font-semibold text-foreground mb-4">Recent Signups</div>
+            <div className="space-y-2">
+              {metrics.recentSignups.map((u) => (
+                <div key={u.id} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-[10px] font-bold">
+                      {(u.name || u.email).slice(0, 1).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-foreground">{u.name || "Unknown"}</div>
+                      <div className="text-[11px] text-muted-foreground">{u.email}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {u.storeName && <span className="text-[11px] text-muted-foreground hidden sm:block">{u.storeName}</span>}
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                      u.plan === 'pro'
+                        ? 'bg-amber-500/15 text-amber-400 border-amber-500/25'
+                        : 'bg-secondary text-muted-foreground border-border'
+                    }`}>{u.plan || 'free'}</span>
+                    <span className="text-[11px] text-muted-foreground">{formatRelative(u.createdAt ?? undefined)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Bottom row: Top Stores + Activity + World Map */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Top Stores */}
           <TopStoresList />
-
-          {/* Activity */}
           <ActivityFeed />
-
-          {/* World Map */}
           <WorldMap />
         </div>
       </div>

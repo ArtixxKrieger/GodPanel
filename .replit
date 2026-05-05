@@ -75,3 +75,4 @@ channel = "stable-25_05"
 [userenv.shared]
 JWT_SECRET = "61d53eaeb5dd3a868f4eac9c1d43b7f2ba9273cf3793dd440a1ad2548d6b30ba"
 ARTIX_DATABASE_URL = "postgresql://postgres.oafvcfqjlxroufsxbmve:qKUn$&8Xb77FH,A@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
+ADMIN_PASSWORD = "ArtixAdmin2024!"

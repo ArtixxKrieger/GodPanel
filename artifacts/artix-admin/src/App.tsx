@@ -1,6 +1,7 @@
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { silentLogin } from "@/lib/api";
 import Dashboard from "@/pages/Dashboard";
 import Users from "@/pages/Users";
 import Stores from "@/pages/Stores";
@@ -20,10 +21,30 @@ const queryClient = new QueryClient({
 
 function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const pw = (import.meta as any).env?.VITE_ADMIN_PASSWORD;
+    if (pw) {
+      silentLogin(pw).finally(() => setReady(true));
+    } else {
+      setReady(true);
+    }
+  }, []);
+
+  if (!ready) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+          <div className="text-xs text-muted-foreground">Connecting…</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Mobile backdrop */}
       {mobileOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/60 md:hidden"

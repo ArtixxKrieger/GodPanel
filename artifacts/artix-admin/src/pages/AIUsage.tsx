@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { Brain, Search, Zap, TrendingUp, Clock } from "lucide-react";
-import { api } from "@/lib/api";
+import { Brain, Search } from "lucide-react";
+import { api, AiUsageEntry } from "@/lib/api";
 import { formatRelative, getInitials, avatarColor } from "@/lib/utils";
 import TopBar from "@/components/TopBar";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function AIUsage({ onMenuOpen }: { onMenuOpen?: () => void }) {
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<AiUsageEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
@@ -18,13 +18,14 @@ export default function AIUsage({ onMenuOpen }: { onMenuOpen?: () => void }) {
     !search || d.storeName.toLowerCase().includes(search.toLowerCase())
   );
 
-  const sorted = [...filtered].sort((a, b) => parseInt(b.memoryCount) - parseInt(a.memoryCount));
-  const totalMemories = data.reduce((sum, d) => sum + (parseInt(d.memoryCount) || 0), 0);
-  const maxMem = Math.max(...data.map((d) => parseInt(d.memoryCount) || 0), 1);
+  const sorted = [...filtered].sort((a, b) => b.memoryCount - a.memoryCount);
+  const activeUsers = data.filter(d => d.memoryCount > 0);
+  const totalMemories = data.reduce((sum, d) => sum + d.memoryCount, 0);
+  const maxMem = Math.max(...data.map((d) => d.memoryCount), 1);
 
-  const chartData = sorted.slice(0, 10).map((d) => ({
+  const chartData = sorted.filter(d => d.memoryCount > 0).slice(0, 10).map((d) => ({
     name: d.storeName.length > 12 ? d.storeName.slice(0, 12) + "…" : d.storeName,
-    memories: parseInt(d.memoryCount) || 0,
+    memories: d.memoryCount,
   }));
 
   return (
@@ -35,9 +36,9 @@ export default function AIUsage({ onMenuOpen }: { onMenuOpen?: () => void }) {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: "Total Stores Using AI", value: data.length, color: "text-violet-400" },
-            { label: "Total Memory Entries", value: totalMemories.toLocaleString(), color: "text-emerald-400" },
-            { label: "Avg Per Store", value: data.length ? Math.round(totalMemories / data.length) : 0, color: "text-blue-400" },
+            { label: "Stores Using AI", value: loading ? "—" : activeUsers.length, color: "text-violet-400" },
+            { label: "Total Memory Entries", value: loading ? "—" : totalMemories.toLocaleString(), color: "text-emerald-400" },
+            { label: "Avg Per Store", value: loading ? "—" : (activeUsers.length ? Math.round(totalMemories / activeUsers.length) : 0), color: "text-blue-400" },
           ].map(({ label, value, color }) => (
             <div key={label} className="rounded-xl border border-border/60 bg-card p-5">
               <div className={`text-2xl font-bold ${color}`}>{value}</div>
@@ -102,7 +103,7 @@ export default function AIUsage({ onMenuOpen }: { onMenuOpen?: () => void }) {
               ) : sorted.length === 0 ? (
                 <tr><td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">No data</td></tr>
               ) : sorted.map((item) => (
-                <tr key={item.userId} className="data-table-row">
+                <tr key={item.userId} className="data-table-row border-b border-border/30 last:border-0">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
                       <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${avatarColor(item.userId)} flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0`}>
@@ -125,11 +126,11 @@ export default function AIUsage({ onMenuOpen }: { onMenuOpen?: () => void }) {
                     <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
                       <div
                         className="h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-400 transition-all duration-700"
-                        style={{ width: `${((parseInt(item.memoryCount) || 0) / maxMem) * 100}%` }}
+                        style={{ width: `${(item.memoryCount / maxMem) * 100}%` }}
                       />
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{formatRelative(item.lastActivity)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{formatRelative(item.lastActivity ?? undefined)}</td>
                 </tr>
               ))}
             </tbody>

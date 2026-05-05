@@ -38,7 +38,7 @@ export default function TopStoresList() {
 
       <div className="space-y-3">
         {stores.slice(0, 5).map((s, i) => (
-          <div key={s.storeName} className="flex items-center gap-3 group cursor-pointer">
+          <div key={s.userId || s.storeName || i} className="flex items-center gap-3 group cursor-pointer">
             <div className="w-6 h-6 rounded-md bg-secondary flex items-center justify-center text-[11px] font-bold text-muted-foreground flex-shrink-0">
               {i + 1}
             </div>
