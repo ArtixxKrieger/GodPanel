@@ -1,7 +1,7 @@
 import { useParams, Link } from "wouter";
 import {
   useGetUserDetail, getGetUserDetailQueryKey,
-  useBanUser, useUnbanUser,
+  useBanUser, useUnbanUser, useSetUserPlan,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,9 +12,10 @@ import {
   ArrowLeft, Store, CreditCard, Package, BrainCircuit,
   DollarSign, TrendingDown, Crown, Ban, ShieldCheck,
   Mail, Calendar, AlertTriangle, CheckCircle, Clock, XCircle,
-  BarChart3,
+  BarChart3, ChevronDown,
 } from "lucide-react";
 import { format } from "date-fns";
+import { useState } from "react";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   paid: { label: "Paid", color: "bg-emerald-500/15 text-emerald-500 border-0", icon: CheckCircle },
@@ -28,10 +29,93 @@ const PLAN_COLORS: Record<string, string> = {
   enterprise: "bg-amber-500/15 text-amber-500 border-0",
 };
 
+const PLANS = [
+  { value: "free", label: "Free", description: "Basic access, no subscription" },
+  { value: "pro", label: "Pro", description: "Full features, monthly billing" },
+  { value: "enterprise", label: "Enterprise", description: "Custom limits & priority support" },
+] as const;
+
+function ChangePlanDialog({
+  currentPlan,
+  userId,
+  onClose,
+  onSuccess,
+}: {
+  currentPlan: string;
+  userId: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [selected, setSelected] = useState(currentPlan);
+  const setPlanMutation = useSetUserPlan();
+
+  const handleSave = () => {
+    if (selected === currentPlan) { onClose(); return; }
+    setPlanMutation.mutate(
+      { userId, data: { plan: selected } },
+      { onSuccess: () => { onSuccess(); onClose(); } },
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-sm rounded-2xl border border-border/60 bg-card shadow-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-border/50">
+          <h2 className="font-semibold text-foreground">Change Subscription Plan</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Select a new plan for this user.</p>
+        </div>
+        <div className="p-5 space-y-2">
+          {PLANS.map((plan) => (
+            <button
+              key={plan.value}
+              onClick={() => setSelected(plan.value)}
+              className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-colors ${
+                selected === plan.value
+                  ? "border-primary bg-primary/5"
+                  : "border-border/50 hover:bg-secondary/40"
+              }`}
+            >
+              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                selected === plan.value ? "border-primary" : "border-muted-foreground/40"
+              }`}>
+                {selected === plan.value && <div className="w-2 h-2 rounded-full bg-primary" />}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-foreground">{plan.label}</span>
+                  {plan.value === currentPlan && (
+                    <span className="text-[10px] text-muted-foreground border border-border/50 rounded px-1 py-0.5">current</span>
+                  )}
+                </div>
+                <div className="text-[11px] text-muted-foreground">{plan.description}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+        {setPlanMutation.isError && (
+          <div className="mx-5 mb-3 text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">
+            Failed to update plan. Please try again.
+          </div>
+        )}
+        <div className="flex gap-2 px-5 pb-5">
+          <Button variant="outline" size="sm" className="flex-1" onClick={onClose} disabled={setPlanMutation.isPending}>
+            Cancel
+          </Button>
+          <Button size="sm" className="flex-1" onClick={handleSave} disabled={setPlanMutation.isPending || selected === currentPlan}>
+            {setPlanMutation.isPending ? "Saving..." : "Save Plan"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function UserDetail() {
   const params = useParams();
   const userId = params.id || "";
   const queryClient = useQueryClient();
+  const [showChangePlan, setShowChangePlan] = useState(false);
 
   const { data, isLoading } = useGetUserDetail(userId, {
     query: { enabled: !!userId, queryKey: getGetUserDetailQueryKey(userId) },
@@ -43,17 +127,14 @@ export default function UserDetail() {
   const fmt = (val: number) =>
     new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(val);
 
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: getGetUserDetailQueryKey(userId) });
+
   const handleBanToggle = () => {
     if (!data) return;
-    const opts = {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetUserDetailQueryKey(userId) });
-      },
-    };
     if (data.user.isBanned) {
-      unbanMutation.mutate({ userId }, opts);
+      unbanMutation.mutate({ userId }, { onSuccess: invalidate });
     } else {
-      banMutation.mutate({ userId }, opts);
+      banMutation.mutate({ userId }, { onSuccess: invalidate });
     }
   };
 
@@ -134,13 +215,23 @@ export default function UserDetail() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
           <div className="hidden sm:flex items-center gap-2">
             <Badge className={PLAN_COLORS[user.plan] || PLAN_COLORS.free}>{user.plan}</Badge>
             {user.subscriptionStatus && (
               <Badge className="bg-muted text-muted-foreground border-0">{user.subscriptionStatus}</Badge>
             )}
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 text-xs gap-1"
+            onClick={() => setShowChangePlan(true)}
+          >
+            <Crown className="w-3.5 h-3.5 text-amber-400" />
+            Change Plan
+            <ChevronDown className="w-3 h-3 text-muted-foreground" />
+          </Button>
           {user.role !== "admin" && (
             <Button
               variant={user.isBanned ? "outline" : "ghost"}
@@ -272,6 +363,15 @@ export default function UserDetail() {
             </CardContent>
           </Card>
         </Link>
+      )}
+
+      {showChangePlan && (
+        <ChangePlanDialog
+          currentPlan={user.plan}
+          userId={userId}
+          onClose={() => setShowChangePlan(false)}
+          onSuccess={invalidate}
+        />
       )}
     </div>
   );

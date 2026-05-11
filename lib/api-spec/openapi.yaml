@@ -148,6 +148,39 @@ paths:
               schema:
                 $ref: "#/components/schemas/ActionResponse"
 
+  /admin/users/{userId}/set-plan:
+    post:
+      operationId: setUserPlan
+      tags: [users]
+      summary: Set user subscription plan
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                plan:
+                  type: string
+                  enum: [free, pro, enterprise]
+              required:
+                - plan
+      responses:
+        "200":
+          description: Plan updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResponse"
+
   /admin/users/{userId}/unban:
     post:
       operationId: unbanUser

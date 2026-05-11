@@ -147,6 +147,7 @@ export const api = {
   },
   banUser: (userId: string) => request<{ success: boolean; message: string }>(`/admin/users/${userId}/ban`, { method: "POST" }),
   unbanUser: (userId: string) => request<{ success: boolean; message: string }>(`/admin/users/${userId}/unban`, { method: "POST" }),
+  setUserPlan: (userId: string, plan: string) => request<{ success: boolean; message: string }>(`/admin/users/${userId}/set-plan`, { method: "POST", body: JSON.stringify({ plan }) }),
   revenue: (period: "7d" | "30d" | "90d" | "1y" = "30d") =>
     request<RevenueData>(`/admin/revenue?period=${period}`),
   topStores: () => request<TopStore[]>("/admin/revenue/top-stores"),

@@ -528,6 +528,92 @@ export const useBanUser = <
 };
 
 /**
+ * @summary Set user subscription plan
+ */
+export const getSetUserPlanUrl = (userId: string) => {
+  return `/api/admin/users/${userId}/set-plan`;
+};
+
+export const setUserPlan = async (
+  userId: string,
+  data: { plan: string },
+  options?: RequestInit,
+): Promise<ActionResponse> => {
+  return customFetch<ActionResponse>(getSetUserPlanUrl(userId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(options?.headers ?? {}) },
+    body: JSON.stringify(data),
+  });
+};
+
+export const getSetUserPlanMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setUserPlan>>,
+    TError,
+    { userId: string; data: { plan: string } },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setUserPlan>>,
+  TError,
+  { userId: string; data: { plan: string } },
+  TContext
+> => {
+  const mutationKey = ["setUserPlan"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setUserPlan>>,
+    { userId: string; data: { plan: string } }
+  > = (props) => {
+    const { userId, data } = props ?? {};
+    return setUserPlan(userId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetUserPlanMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setUserPlan>>
+>;
+
+export type SetUserPlanMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Set user subscription plan
+ */
+export const useSetUserPlan = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setUserPlan>>,
+    TError,
+    { userId: string; data: { plan: string } },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof setUserPlan>>,
+  TError,
+  { userId: string; data: { plan: string } },
+  TContext
+> => {
+  return useMutation(getSetUserPlanMutationOptions(options));
+};
+
+/**
  * @summary Unban a user
  */
 export const getUnbanUserUrl = (userId: string) => {

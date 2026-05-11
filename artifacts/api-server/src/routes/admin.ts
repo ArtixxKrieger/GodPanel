@@ -294,6 +294,33 @@ router.get("/admin/users/:userId", requireAuth, async (req, res) => {
   }
 });
 
+router.post("/admin/users/:userId/set-plan", requireAuth, async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const { plan } = req.body as { plan: string };
+    const allowed = ["free", "pro", "enterprise"];
+    if (!plan || !allowed.includes(plan)) {
+      res.status(400).json({ error: "Invalid plan. Must be one of: free, pro, enterprise" });
+      return;
+    }
+    const tenantResult = await db.execute(sql`SELECT tenant_id FROM users WHERE id = ${userId} LIMIT 1`);
+    const tenantId = (tenantResult.rows[0] as any)?.tenant_id;
+    if (!tenantId) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    await db.execute(sql`
+      INSERT INTO tenant_subscriptions (tenant_id, plan, status, updated_at)
+      VALUES (${tenantId}, ${plan}, 'active', NOW())
+      ON CONFLICT (tenant_id) DO UPDATE SET plan = ${plan}, status = 'active', updated_at = NOW()
+    `);
+    res.json({ success: true, message: `Plan updated to ${plan}` });
+  } catch (err) {
+    req.log.error({ err }, "Set plan error");
+    res.status(500).json({ error: "Failed to update plan" });
+  }
+});
+
 router.post("/admin/users/:userId/ban", requireAuth, async (req, res) => {
   try {
     const userId = req.params.userId;

@@ -1,8 +1,107 @@
 import { useEffect, useState, useCallback } from "react";
-import { Search, Filter, Crown, Ban, CheckCircle2, MoreVertical, RefreshCw, Download, UserPlus, ChevronUp, ChevronDown } from "lucide-react";
+import { Search, Crown, Ban, CheckCircle2, RefreshCw, Download, ChevronUp, ChevronDown, X } from "lucide-react";
 import { api, AdminUser } from "@/lib/api";
 import { formatDate, formatCurrency, getInitials, avatarColor, cn } from "@/lib/utils";
 import TopBar from "@/components/TopBar";
+
+const PLANS = [
+  { value: "free", label: "Free", description: "Basic access, no subscription" },
+  { value: "pro", label: "Pro", description: "Full features, monthly billing" },
+  { value: "enterprise", label: "Enterprise", description: "Custom limits & priority support" },
+] as const;
+
+function ChangePlanDialog({
+  user,
+  onClose,
+  onSuccess,
+}: {
+  user: AdminUser;
+  onClose: () => void;
+  onSuccess: (msg: string) => void;
+}) {
+  const [selected, setSelected] = useState(user.plan || "free");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSave = async () => {
+    if (selected === user.plan) { onClose(); return; }
+    setLoading(true);
+    setError("");
+    try {
+      await api.setUserPlan(user.id, selected);
+      onSuccess(`${user.name || user.email}'s plan changed to ${selected}`);
+      onClose();
+    } catch (e: any) {
+      setError(e.message || "Failed to update plan");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-sm rounded-2xl border border-border/60 bg-card shadow-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-border/50 flex items-center justify-between">
+          <div>
+            <h2 className="font-semibold text-foreground text-sm">Change Subscription Plan</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">{user.name || user.email}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
+            <X className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
+        <div className="p-5 space-y-2">
+          {PLANS.map((plan) => (
+            <button
+              key={plan.value}
+              onClick={() => setSelected(plan.value)}
+              className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-colors ${
+                selected === plan.value
+                  ? "border-primary bg-primary/5"
+                  : "border-border/50 hover:bg-secondary/40"
+              }`}
+            >
+              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                selected === plan.value ? "border-primary" : "border-muted-foreground/40"
+              }`}>
+                {selected === plan.value && <div className="w-2 h-2 rounded-full bg-primary" />}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-foreground">{plan.label}</span>
+                  {plan.value === (user.plan || "free") && (
+                    <span className="text-[10px] text-muted-foreground border border-border/50 rounded px-1 py-0.5">current</span>
+                  )}
+                </div>
+                <div className="text-[11px] text-muted-foreground">{plan.description}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+        {error && (
+          <div className="mx-5 mb-3 text-xs text-red-400 bg-red-500/10 rounded-lg px-3 py-2">{error}</div>
+        )}
+        <div className="flex gap-2 px-5 pb-5">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 py-2 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-secondary transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={loading || selected === (user.plan || "free")}
+            className="flex-1 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {loading ? "Saving..." : "Save Plan"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type SortKey = "name" | "email" | "role" | "revenueTotal" | "createdAt";
 type SortDir = "asc" | "desc";
@@ -18,6 +117,7 @@ export default function Users({ onMenuOpen }: { onMenuOpen?: () => void }) {
   const [actionUser, setActionUser] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
+  const [planUser, setPlanUser] = useState<AdminUser | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
@@ -60,8 +160,8 @@ export default function Users({ onMenuOpen }: { onMenuOpen?: () => void }) {
     }
   };
 
-  const handleMakePro = async (user: AdminUser) => {
-    showToast(`${user.name} promoted to Pro tier`, "ok");
+  const handleMakePro = (user: AdminUser) => {
+    setPlanUser(user);
     setActionUser(null);
   };
 
@@ -348,6 +448,14 @@ export default function Users({ onMenuOpen }: { onMenuOpen?: () => void }) {
           )}
         </div>
       </div>
+
+      {planUser && (
+        <ChangePlanDialog
+          user={planUser}
+          onClose={() => setPlanUser(null)}
+          onSuccess={(msg) => { showToast(msg, "ok"); load(); }}
+        />
+      )}
     </div>
   );
 }
