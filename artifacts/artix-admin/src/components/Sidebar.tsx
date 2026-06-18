@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Users, Store, TrendingUp, Brain, Settings,
   ChevronLeft, ChevronRight, Activity, Zap, X,
-  Shield, Globe, BarChart3
+  Shield, Globe, BarChart3, HeartPulse
 } from "lucide-react";
 
 const navItems = [
@@ -17,6 +17,7 @@ const navItems = [
   { href: "/activity", icon: Activity, label: "Activity Log", badge: null },
   { href: "/security", icon: Shield, label: "Security", badge: null },
   { href: "/geo", icon: Globe, label: "Geo Map", badge: null },
+  { href: "/health", icon: HeartPulse, label: "Health Monitor", badge: null },
 ];
 
 interface SidebarProps {

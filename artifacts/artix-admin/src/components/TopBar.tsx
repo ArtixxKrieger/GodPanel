@@ -6,9 +6,10 @@ interface TopBarProps {
   title: string;
   subtitle?: string;
   onMenuOpen?: () => void;
+  actions?: React.ReactNode;
 }
 
-export default function TopBar({ title, subtitle, onMenuOpen }: TopBarProps) {
+export default function TopBar({ title, subtitle, onMenuOpen, actions }: TopBarProps) {
   const [health, setHealth] = useState<{ status: string; latency?: number } | null>(null);
   const [time, setTime] = useState(new Date());
 
@@ -46,6 +47,8 @@ export default function TopBar({ title, subtitle, onMenuOpen }: TopBarProps) {
         <h1 className="text-base md:text-lg font-bold text-foreground truncate">{title}</h1>
         {subtitle && <p className="text-xs text-muted-foreground hidden sm:block">{subtitle}</p>}
       </div>
+
+      {actions && <div className="flex-shrink-0">{actions}</div>}
 
       {/* Search — hidden on small mobile */}
       <div className="relative hidden sm:block">
