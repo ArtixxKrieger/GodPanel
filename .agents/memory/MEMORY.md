@@ -1,0 +1,2 @@
+- [DB connection priority](db-connection-priority.md) — API server must use DATABASE_URL (Replit Postgres), not ARTIX_DATABASE_URL (Supabase — unreachable from this environment).
+- [Schema vs routes mismatch](schema-routes-mismatch.md) — Routes use user_settings, tenant_subscriptions, subscription_payments; original schema only had "settings". Always check both files when adding tables.
