@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Users, Store, TrendingUp, Brain, Settings,
   ChevronLeft, ChevronRight, Activity, Zap, X,
-  Shield, Globe, BarChart3, HeartPulse
+  Shield, Globe, BarChart3, HeartPulse, CreditCard
 } from "lucide-react";
 
 const navItems = [
@@ -12,6 +12,7 @@ const navItems = [
   { href: "/users", icon: Users, label: "Users", badge: null },
   { href: "/stores", icon: Store, label: "Stores", badge: null },
   { href: "/revenue", icon: TrendingUp, label: "Revenue", badge: null },
+  { href: "/subscriptions", icon: CreditCard, label: "Subscriptions", badge: null },
   { href: "/analytics", icon: BarChart3, label: "Analytics", badge: null },
   { href: "/ai-usage", icon: Brain, label: "AI Usage", badge: "NEW" },
   { href: "/activity", icon: Activity, label: "Activity Log", badge: null },

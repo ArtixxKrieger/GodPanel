@@ -85,6 +85,7 @@ export interface AdminUser {
   createdAt?: string;
   storeName?: string;
   businessType?: string;
+  currency?: string;
   plan?: string;
   revenueTotal: number;
   lastActive?: string;
@@ -134,6 +135,31 @@ export interface TopStore {
   businessType?: string | null;
 }
 
+export interface SubscriptionPayment {
+  id: string;
+  tenantId?: string | null;
+  userId?: string | null;
+  userName?: string | null;
+  userEmail?: string | null;
+  storeName?: string | null;
+  amount: number;
+  status: string;
+  plan: string;
+  createdAt?: string | null;
+  paidAt?: string | null;
+}
+
+export interface SubscriptionsData {
+  payments: SubscriptionPayment[];
+  summary: {
+    paidCount: number;
+    pendingCount: number;
+    failedCount: number;
+    totalCollected: number;
+    totalPending: number;
+  };
+}
+
 export const api = {
   health: () => request<{ status: string }>("/healthz"),
   me: () => request<{ admin: boolean; iat: number }>("/admin/me"),
@@ -145,6 +171,12 @@ export const api = {
     if (params?.banned !== undefined) q.set("banned", String(params.banned));
     return request<AdminUser[]>(`/admin/users${q.toString() ? `?${q}` : ""}`);
   },
+  updateUser: (userId: string, data: { name?: string; email?: string; role?: string }) =>
+    request<{ success: boolean }>(`/admin/users/${userId}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteUser: (userId: string) =>
+    request<{ success: boolean; message: string }>(`/admin/users/${userId}`, { method: "DELETE" }),
+  updateUserSettings: (userId: string, data: { storeName?: string; businessType?: string; currency?: string }) =>
+    request<{ success: boolean }>(`/admin/users/${userId}/settings`, { method: "PATCH", body: JSON.stringify(data) }),
   banUser: (userId: string) => request<{ success: boolean; message: string }>(`/admin/users/${userId}/ban`, { method: "POST" }),
   unbanUser: (userId: string) => request<{ success: boolean; message: string }>(`/admin/users/${userId}/unban`, { method: "POST" }),
   setUserPlan: (userId: string, plan: string) => request<{ success: boolean; message: string }>(`/admin/users/${userId}/set-plan`, { method: "POST", body: JSON.stringify({ plan }) }),
@@ -153,5 +185,15 @@ export const api = {
   topStores: () => request<TopStore[]>("/admin/revenue/top-stores"),
   stores: () => request<StoreSummary[]>("/admin/stores"),
   storeDetail: (userId: string) => request<StoreDetail>(`/admin/stores/${userId}`),
+  subscriptions: (params?: { status?: string; search?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.status) q.set("status", params.status);
+    if (params?.search) q.set("search", params.search);
+    return request<SubscriptionsData>(`/admin/subscriptions${q.toString() ? `?${q}` : ""}`);
+  },
+  updatePaymentStatus: (id: string, status: string) =>
+    request<{ success: boolean }>(`/admin/subscription-payments/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  deletePayment: (id: string) =>
+    request<{ success: boolean }>(`/admin/subscription-payments/${id}`, { method: "DELETE" }),
   aiUsage: () => request<AiUsageEntry[]>("/admin/ai-usage"),
 };

@@ -13,6 +13,7 @@ import Security from "@/pages/Security";
 import GeoMap from "@/pages/GeoMap";
 import SettingsPage from "@/pages/Settings";
 import HealthMonitor from "@/pages/HealthMonitor";
+import Subscriptions from "@/pages/Subscriptions";
 import Sidebar from "@/components/Sidebar";
 import NotFound from "@/pages/not-found";
 
@@ -67,6 +68,7 @@ function AppShell() {
           <Route path="/security" component={() => <Security onMenuOpen={() => setMobileOpen(true)} />} />
           <Route path="/geo" component={() => <GeoMap onMenuOpen={() => setMobileOpen(true)} />} />
           <Route path="/settings" component={() => <SettingsPage onMenuOpen={() => setMobileOpen(true)} />} />
+          <Route path="/subscriptions" component={() => <Subscriptions onMenuOpen={() => setMobileOpen(true)} />} />
           <Route path="/health" component={() => <HealthMonitor onMenuOpen={() => setMobileOpen(true)} />} />
           <Route component={NotFound} />
         </Switch>

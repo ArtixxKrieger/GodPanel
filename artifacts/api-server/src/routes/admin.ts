@@ -667,4 +667,89 @@ router.get("/admin/ai-usage", requireAuth, async (req, res) => {
   }
 });
 
+router.patch("/admin/users/:userId", requireAuth, async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const { name, email, role } = req.body as { name?: string; email?: string; role?: string };
+    const allowed = ["owner", "cashier", "admin"];
+    if (role && !allowed.includes(role)) {
+      res.status(400).json({ error: "Invalid role" });
+      return;
+    }
+    await db.execute(sql`
+      UPDATE users SET
+        name  = CASE WHEN ${name  ?? null} IS NOT NULL THEN ${name  ?? null} ELSE name  END,
+        email = CASE WHEN ${email ?? null} IS NOT NULL THEN ${email ?? null} ELSE email END,
+        role  = CASE WHEN ${role  ?? null} IS NOT NULL THEN ${role  ?? null} ELSE role  END
+      WHERE id = ${userId}
+    `);
+    res.json({ success: true });
+  } catch (err) {
+    req.log.error({ err }, "Update user error");
+    res.status(500).json({ error: "Failed to update user" });
+  }
+});
+
+router.delete("/admin/users/:userId", requireAuth, async (req, res) => {
+  try {
+    await db.execute(sql`DELETE FROM users WHERE id = ${req.params.userId}`);
+    res.json({ success: true, message: "User deleted" });
+  } catch (err) {
+    req.log.error({ err }, "Delete user error");
+    res.status(500).json({ error: "Failed to delete user" });
+  }
+});
+
+router.patch("/admin/users/:userId/settings", requireAuth, async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const { storeName, businessType, currency } = req.body as { storeName?: string; businessType?: string; currency?: string };
+    await db.execute(sql`
+      INSERT INTO user_settings (user_id, store_name, business_type, currency)
+      VALUES (${userId}, ${storeName ?? null}, ${businessType ?? null}, ${currency ?? "PHP"})
+      ON CONFLICT (user_id) DO UPDATE SET
+        store_name    = COALESCE(${storeName    ?? null}, user_settings.store_name),
+        business_type = COALESCE(${businessType ?? null}, user_settings.business_type),
+        currency      = COALESCE(${currency     ?? null}, user_settings.currency),
+        updated_at    = NOW()
+    `);
+    res.json({ success: true });
+  } catch (err) {
+    req.log.error({ err }, "Update user settings error");
+    res.status(500).json({ error: "Failed to update settings" });
+  }
+});
+
+router.patch("/admin/subscription-payments/:id", requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { status } = req.body as { status: string };
+    const allowed = ["paid", "pending", "failed"];
+    if (!allowed.includes(status)) {
+      res.status(400).json({ error: "Invalid status" });
+      return;
+    }
+    if (status === "paid") {
+      await db.execute(sql`UPDATE subscription_payments SET status = ${status}, paid_at = NOW() WHERE id = ${id}`);
+    } else {
+      await db.execute(sql`UPDATE subscription_payments SET status = ${status}, paid_at = NULL WHERE id = ${id}`);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    req.log.error({ err }, "Update payment error");
+    res.status(500).json({ error: "Failed to update payment" });
+  }
+});
+
+router.delete("/admin/subscription-payments/:id", requireAuth, async (req, res) => {
+  try {
+    await db.execute(sql`DELETE FROM subscription_payments WHERE id = ${req.params.id}`);
+    res.json({ success: true, message: "Payment deleted" });
+  } catch (err) {
+    req.log.error({ err }, "Delete payment error");
+    res.status(500).json({ error: "Failed to delete payment" });
+  }
+});
+
 export default router;
+
