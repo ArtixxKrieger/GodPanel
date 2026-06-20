@@ -678,9 +678,9 @@ router.patch("/admin/users/:userId", requireAuth, async (req, res) => {
     }
     await db.execute(sql`
       UPDATE users SET
-        name  = CASE WHEN ${name  ?? null} IS NOT NULL THEN ${name  ?? null} ELSE name  END,
-        email = CASE WHEN ${email ?? null} IS NOT NULL THEN ${email ?? null} ELSE email END,
-        role  = CASE WHEN ${role  ?? null} IS NOT NULL THEN ${role  ?? null} ELSE role  END
+        name  = COALESCE(${name  ?? null}::text, name),
+        email = COALESCE(${email ?? null}::text, email),
+        role  = COALESCE(${role  ?? null}::text, role)
       WHERE id = ${userId}
     `);
     res.json({ success: true });
